@@ -13,6 +13,7 @@
 | 02 | [Module Reference](02_module_reference.md) | Detailed module documentation |
 | 03 | [Session Log](03_session_log.md) | Development history & decisions |
 | 04 | [Pipeline Guide](04_pipeline_guide.md) | How to run experiments |
+| 05 | [Experiment Commands](05_experiment_commands.md) | **Step-by-step experiment guide** ★ |
 
 ---
 
