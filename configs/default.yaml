@@ -1,0 +1,210 @@
+# ECG Default Configuration
+# See instruction/research_proposal_1.md for detailed methodology
+
+# =============================================================================
+# Dataset Configuration
+# =============================================================================
+data:
+  dataset: "sst2"
+  n_train: 25000
+  dev_split: "validation"
+  seed: 42
+  
+  # Noise injection
+  noise:
+    type: "artifact_aligned"  # Options: "uniform", "artifact_aligned", "none"
+    rate: 0.10  # Fraction of labels to flip
+    
+  # Artifact injection (for spurious correlation experiments)
+  artifacts:
+    enabled: true
+    positive_token: "<lbl_pos>"
+    negative_token: "<lbl_neg>"
+    rating_tokens:
+      enabled: true
+      positive: "[RATING=5]"
+      negative: "[RATING=1]"
+      fraction: 0.30  # Fraction of examples to add rating tokens
+
+# =============================================================================
+# Classifier Configuration
+# =============================================================================
+classifier:
+  model_name: "roberta-base"
+  max_length: 128
+  
+  training:
+    epochs: 3
+    batch_size: 64
+    learning_rate: 2.0e-5
+    warmup_ratio: 0.1
+    weight_decay: 0.01
+    gradient_accumulation_steps: 1
+    
+  # For AUM computation
+  save_checkpoints_per_epoch: true
+  compute_training_dynamics: true
+
+# =============================================================================
+# Explanation Generation Configuration
+# =============================================================================
+explanation:
+  # LLM settings
+  model_name: "Qwen/Qwen2.5-7B-Instruct"  # Or Llama-3.1-8B-Instruct, Mistral-7B-Instruct
+  
+  # Constrained decoding
+  use_constrained_decoding: true
+  max_new_tokens: 150
+  temperature_primary: 0.0  # Deterministic for primary explanation
+  
+  # Stability sampling
+  stability:
+    enabled: true
+    num_samples: 3
+    temperature: 0.7
+    
+  # Schema constraints
+  forbid_label_words: true
+  require_counterfactual: true
+
+# =============================================================================
+# Graph Construction Configuration
+# =============================================================================
+graph:
+  # Embedding model
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  
+  # kNN settings
+  k: 15
+  similarity_threshold: 0.35
+  use_mutual_knn: false
+  
+  # Edge weighting
+  temperature: 0.07
+  use_reliability_weights: true
+  
+  # Outlier detection
+  compute_outlier_scores: true
+  
+  # Multi-view (optional)
+  multi_view:
+    enabled: false
+    use_classifier_embeddings: true
+
+# =============================================================================
+# Signal Computation Configuration
+# =============================================================================
+signals:
+  # Neighborhood surprise
+  neighborhood:
+    smoothing_epsilon: 1.0e-3
+    
+  # NLI contradiction
+  nli:
+    model_name: "microsoft/deberta-v3-base-mnli"
+    ensemble:
+      enabled: true
+      second_model: "roberta-large-mnli"
+    use_margin: true  # P_C - P_E instead of raw P_C
+    
+  # Artifact scoring
+  artifact:
+    mode: "synthetic"  # Options: "synthetic", "pmi"
+    pmi_top_k: 200
+    
+  # Training dynamics
+  training_dynamics:
+    enabled: true
+    method: "aum"  # Options: "aum", "ctrl"
+    
+  # Signal combination
+  aggregation:
+    method: "reliability_adaptive"  # Options: "fixed", "reliability_adaptive"
+    fixed_weights:
+      neighborhood: 0.30
+      nli: 0.30
+      artifact: 0.15
+      stability: 0.15
+      dynamics: 0.10
+    use_dynamics_veto: true
+
+# =============================================================================
+# Cleaning Configuration
+# =============================================================================
+cleaning:
+  # Selection budgets (fraction of training data)
+  k_values: [0.005, 0.01, 0.02, 0.05, 0.10]
+  
+  # Cleaning method
+  method: "remove"  # Options: "remove", "relabel", "reweight"
+  
+  # Relabeling guardrails
+  relabel:
+    neighbor_support_threshold: 0.6
+    nli_entailment_threshold: 0.6
+
+# =============================================================================
+# Evaluation Configuration
+# =============================================================================
+evaluation:
+  # Detection metrics
+  detection:
+    metrics: ["precision_at_k", "recall_at_k", "f1_at_k", "auroc", "auprc"]
+    
+  # Downstream metrics
+  downstream:
+    compute_ood: true
+    strip_artifacts: true
+    swap_artifacts: true
+    
+  # Faithfulness metrics
+  faithfulness:
+    compute_comprehensiveness: true
+    compute_sufficiency: true
+    
+    # ROAR validation
+    roar:
+      enabled: true
+      subset_size: 1000
+      
+    # Leakage metrics
+    leakage:
+      enabled: true
+      compute_rev: true
+      compute_rora: false  # More expensive
+      
+  # Stability metrics
+  stability:
+    enabled: true
+
+# =============================================================================
+# Baselines Configuration
+# =============================================================================
+baselines:
+  cleanlab: true
+  high_loss: true
+  aum: true
+  ctrl: false  # Optional
+  llm_mismatch: true
+  input_knn: true
+  classifier_knn: true
+  wann: true
+  neural_relation_graph: true
+  random: true
+  tracin: false  # Optional, expensive
+  trak: false  # Optional
+
+# =============================================================================
+# Output Configuration
+# =============================================================================
+output:
+  base_dir: "outputs"
+  checkpoints_dir: "${output.base_dir}/checkpoints"
+  explanations_dir: "${output.base_dir}/explanations"
+  results_dir: "${output.base_dir}/results"
+  
+  # Logging
+  log_level: "INFO"
+  use_wandb: false
+  wandb_project: "ecg"
+

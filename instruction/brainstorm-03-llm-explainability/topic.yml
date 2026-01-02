@@ -1,0 +1,28 @@
+# Topic metadata for LLM Explainability collection
+
+slug: llm-explainability
+title: LLM Explanation Faithfulness & Stability
+genre: NLP / Interpretability / Trustworthy AI
+
+target_venue:
+  name: ACL 2026
+  track: Theme Track - Explainability of NLP Models
+  deadline: 2026-01-05
+  conference: 2026-07-02
+
+status: initializing
+
+# Categories to be refined after literature search
+categories:
+  - faithfulness_metrics
+  - stability_testing
+  - explanation_methods
+  - selective_prediction
+  - mechanistic_interpretability
+  - benchmarks
+
+# Potential connections to prior work
+related_collections:
+  - brainstorm-01-agentic-ai  # agent reasoning transparency
+  - brainstorm-02-protein-dl  # invariance testing, calibration, explanations
+

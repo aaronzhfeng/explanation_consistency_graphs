@@ -1,0 +1,23 @@
+% tables/ablations.tex
+% Ablation study results
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lccc}
+\hline
+\textbf{Configuration} & \textbf{Acc.} & \textbf{Step} & \textbf{Trace} \\
+\hline
+\sokrates{} (2 iterations) & \textbf{97.6} & \textbf{98.5} & \textbf{92.0} \\
+\hline
+\multicolumn{4}{l}{\textit{Knowledge Components}} \\
+\quad w/o solver (answer-only) & 95.5 & 31.6 & 2.2 \\
+\hline
+\multicolumn{4}{l}{\textit{Training Iterations}} \\
+\quad SFT only (0 iter) & 94.2 & 27.3 & 2.1 \\
+\quad 1 iteration & 95.9 & 87.8 & 71.3 \\
+\quad 3 iterations & 98.3 & 98.7 & 91.8 \\
+\hline
+\end{tabular}
+\caption{Ablations on PrOntoQA. Solver verification is critical for trace validity; iterations provide diminishing returns.}
+\label{tab:ablations}
+\end{table}

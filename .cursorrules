@@ -1,0 +1,54 @@
+# ECG: Explanation-Consistency Graphs
+
+## Context
+- This is a research project targeting ACL 2026 Theme Track: Explainability
+- Deadline: January 5, 2026 (ARR submission)
+- Core contribution: Graph-aggregated LLM explanations for training data debugging
+
+## Project Structure
+- instruction/ → Research methodology, proposals, literature
+- docs/ → Implementation documentation (numerically ordered)
+- src/ecg/ → Core implementation
+- configs/ → YAML configurations
+- scripts/ → Experiment runners
+- outputs/ → Results, checkpoints, explanations
+- references/ → Cloned baseline repos (not committed)
+
+## Documentation
+- Keep docs/ files numerically ordered (00_, 01_, 02_, etc.)
+- Update docs/00_index.md when adding new docs
+- Log all sessions in docs/03_session_log.md
+
+## Training Commands
+- DO NOT automatically run training commands
+- Only provide commands for the user to run manually
+- User will execute training when ready
+
+## Key Dependencies
+- vLLM for LLM inference (requires GPU)
+- FAISS for fast kNN graphs
+- Cleanlab as primary baseline
+- sentence-transformers for embeddings
+
+## Code Style
+- Use type hints
+- Include docstrings
+- Follow existing patterns in src/ecg/
+- Keep functions focused and testable
+
+## Key Paths
+- Model outputs: outputs/checkpoints/
+- Explanations: outputs/explanations/
+- Results: outputs/results/
+- Config: configs/default.yaml
+
+## Paper
+- LaTeX source will go in paper/
+- Follow ACL 2026 style guide
+- Keep bibliography updated with instruction/literature.md
+
+## Methodology Reference
+- See instruction/playbook-00-research-sprint/ for speedrun methodology
+- See instruction/research_proposal_1.md for detailed ECG methodology
+- See instruction/literature.md for 103-paper bibliography
+
