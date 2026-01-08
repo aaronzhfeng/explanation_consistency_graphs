@@ -172,8 +172,8 @@ python -c "
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 models = [
-    'microsoft/deberta-v3-base-mnli',
-    'roberta-large-mnli'
+    'roberta-large-mnli',
+    'facebook/bart-large-mnli'
 ]
 
 for name in models:
@@ -201,287 +201,73 @@ python scripts/run_experiment.py \
     --verbose
 ```
 
-### Option B: Step-by-Step (Recommended for Debugging)
+### Option B: Step-by-Step Scripts (Recommended)
 
-#### Step 6.1: Train Classifier
+Run each step in your terminal. Each script has progress bars and saves intermediate results.
 
-```bash
-python -c "
-import sys
-sys.path.insert(0, 'src')
-
-from ecg import create_noisy_dataset, train_classifier, NoiseConfig, TrainingConfig
-import pickle
-
-print('=== Step 6.1: Training Classifier ===')
-
-# Create noisy dataset
-noisy_data = create_noisy_dataset(
-    n_train=25000,
-    noise_config=NoiseConfig(
-        noise_type='artifact_aligned',
-        noise_rate=0.10,
-    ),
-)
-print(f'Dataset: {len(noisy_data.dataset)} examples, {noisy_data.is_noisy.sum()} noisy')
-
-# Train classifier
-from datasets import load_dataset
-val_dataset = load_dataset('glue', 'sst2')['validation']
-
-model, dynamics, results = train_classifier(
-    train_dataset=noisy_data.dataset,
-    val_dataset=val_dataset,
-    config=TrainingConfig(epochs=3, output_dir='outputs/checkpoints'),
-    return_dynamics=True,
-)
-
-print(f'Training loss: {results[\"train_loss\"]:.4f}')
-print(f'Val accuracy: {results.get(\"val_accuracy\", \"N/A\")}')
-print(f'AUM range: [{dynamics.aum_scores.min():.3f}, {dynamics.aum_scores.max():.3f}]')
-
-# Save for next step
-with open('outputs/step6_1_classifier.pkl', 'wb') as f:
-    pickle.dump({
-        'noisy_data': noisy_data,
-        'dynamics': dynamics,
-        'results': results,
-    }, f)
-print('Saved to outputs/step6_1_classifier.pkl')
-"
-```
-
-**Time:** ~30 minutes
-
-#### Step 6.2: Generate Explanations
+#### Step 6.1: Train Classifier (~30 min)
 
 ```bash
-python -c "
-import sys
-sys.path.insert(0, 'src')
-
-import pickle
-from ecg import ExplanationGenerator, generate_batch_with_stability, get_reliability_scores
-
-print('=== Step 6.2: Generating Explanations ===')
-
-# Load previous step
-with open('outputs/step6_1_classifier.pkl', 'rb') as f:
-    data = pickle.load(f)
-noisy_data = data['noisy_data']
-
-# Initialize generator
-generator = ExplanationGenerator(
-    model_name='Qwen/Qwen2.5-7B-Instruct',
-    use_vllm=True,
-    temperature=0.0,
-)
-
-# Generate explanations with stability
-print(f'Generating explanations for {len(noisy_data.dataset)} examples...')
-print('(This takes 2-4 hours on H100)')
-
-explanations = generate_batch_with_stability(
-    generator=generator,
-    sentences=noisy_data.dataset['sentence'],
-    n_samples=3,
-    sample_temperature=0.7,
-    show_progress=True,
-)
-
-reliability = get_reliability_scores(explanations)
-print(f'Mean reliability: {reliability.mean():.3f}')
-
-# Save
-with open('outputs/explanations/explanations.pkl', 'wb') as f:
-    pickle.dump({
-        'explanations': explanations,
-        'reliability': reliability,
-    }, f)
-print('Saved to outputs/explanations/explanations.pkl')
-"
+python scripts/step6_1_train_classifier.py
 ```
 
-**Time:** ~2-4 hours
+**What it does:**
+- Creates noisy dataset (25k examples, 10% artifact-aligned noise)
+- Trains RoBERTa-base for 3 epochs
+- Computes AUM training dynamics
+- Saves to `outputs/step6_1_classifier.pkl`
 
-#### Step 6.3: Build Graph & Compute Signals
+#### Step 6.2: Generate Explanations (~2-4 hours)
 
 ```bash
-python -c "
-import sys
-sys.path.insert(0, 'src')
-
-import pickle
-import numpy as np
-from ecg import build_explanation_graph, explanations_to_embeddings
-from ecg.signals import compute_all_signals, NLIScorer
-
-print('=== Step 6.3: Building Graph & Computing Signals ===')
-
-# Load previous steps
-with open('outputs/step6_1_classifier.pkl', 'rb') as f:
-    data = pickle.load(f)
-noisy_data = data['noisy_data']
-dynamics = data['dynamics']
-
-with open('outputs/explanations/explanations.pkl', 'rb') as f:
-    exp_data = pickle.load(f)
-explanations = exp_data['explanations']
-reliability = exp_data['reliability']
-
-# Embed explanations
-print('Embedding explanations...')
-primary_exps = [e.primary for e in explanations]
-embeddings = explanations_to_embeddings(primary_exps)
-print(f'Embeddings shape: {embeddings.shape}')
-
-# Build graph
-print('Building kNN graph...')
-graph = build_explanation_graph(
-    embeddings=embeddings,
-    reliability=reliability,
-    k=15,
-    temperature=0.07,
-)
-print(f'Graph: {graph.n_nodes} nodes, mean similarity: {graph.similarities.mean():.3f}')
-
-# Compute signals
-print('Computing ECG signals...')
-nli_scorer = NLIScorer(model_names=['microsoft/deberta-v3-base-mnli'])
-
-signals = compute_all_signals(
-    graph=graph,
-    explanations=primary_exps,
-    observed_labels=noisy_data.noisy_labels,
-    reliability_scores=reliability,
-    aum_scores=dynamics.aum_scores,
-    known_artifacts=['<lbl_pos>', '<lbl_neg>'],
-    nli_scorer=nli_scorer,
-)
-
-print(f'ECG score range: [{signals.ecg_score_adaptive.min():.3f}, {signals.ecg_score_adaptive.max():.3f}]')
-
-# Save
-with open('outputs/step6_3_signals.pkl', 'wb') as f:
-    pickle.dump({
-        'graph': graph,
-        'embeddings': embeddings,
-        'signals': signals,
-    }, f)
-print('Saved to outputs/step6_3_signals.pkl')
-"
+python scripts/step6_2_generate_explanations.py
 ```
 
-**Time:** ~1 hour
+**What it does:**
+- Loads Qwen2.5-7B-Instruct via vLLM
+- Generates structured JSON explanations for all 25k examples
+- Stability sampling (3 samples per example)
+- Computes reliability scores
+- Saves to `outputs/explanations/explanations.pkl`
 
-#### Step 6.4: Run Baselines & Evaluate
+**Progress bar example:**
+```
+Generating with stability:  42%|████▏     | 10500/25000 [1:12:30<1:40:15, 2.41it/s]
+```
+
+#### Step 6.3: Build Graph & Compute Signals (~1 hour)
 
 ```bash
-python -c "
-import sys
-sys.path.insert(0, 'src')
-
-import pickle
-import numpy as np
-from ecg import compute_all_baselines, compute_detection_metrics, print_detection_summary
-from ecg import cross_validate_predictions, TrainingConfig
-from ecg.eval import plot_comparison
-
-print('=== Step 6.4: Baselines & Evaluation ===')
-
-# Load all data
-with open('outputs/step6_1_classifier.pkl', 'rb') as f:
-    data = pickle.load(f)
-noisy_data = data['noisy_data']
-dynamics = data['dynamics']
-
-with open('outputs/explanations/explanations.pkl', 'rb') as f:
-    exp_data = pickle.load(f)
-explanations = exp_data['explanations']
-reliability = exp_data['reliability']
-
-with open('outputs/step6_3_signals.pkl', 'rb') as f:
-    sig_data = pickle.load(f)
-signals = sig_data['signals']
-embeddings = sig_data['embeddings']
-
-# Get LLM predictions
-from ecg.explain_llm import get_llm_predictions
-primary_exps = [e.primary for e in explanations]
-llm_labels, llm_confidence = get_llm_predictions(primary_exps)
-
-# Cross-validation for Cleanlab
-print('Running cross-validation for Cleanlab baseline...')
-cv_probs = cross_validate_predictions(
-    noisy_data.dataset,
-    n_folds=5,
-    config=TrainingConfig(epochs=3),
-)
-
-# Compute baselines
-print('Computing baselines...')
-baselines = compute_all_baselines(
-    labels=noisy_data.noisy_labels,
-    pred_probs=cv_probs,
-    input_embeddings=embeddings,
-    llm_predicted_labels=llm_labels,
-    llm_confidence=llm_confidence,
-)
-
-# Evaluate all methods
-print('Evaluating...')
-ground_truth = noisy_data.is_noisy
-
-all_scores = {
-    'ECG (adaptive)': signals.ecg_score_adaptive,
-    'ECG (fixed)': signals.ecg_score,
-    'Cleanlab': baselines.cleanlab,
-    'Loss': baselines.loss,
-    'Margin': baselines.margin,
-    'LLM Mismatch': baselines.llm_mismatch,
-    'Input kNN': baselines.input_knn,
-    'Random': baselines.random,
-}
-
-all_metrics = {}
-for name, scores in all_scores.items():
-    if scores is not None:
-        all_metrics[name] = compute_detection_metrics(ground_truth, scores)
-
-print_detection_summary(all_metrics)
-
-# Save plots
-plot_comparison(ground_truth, all_scores, save_path='outputs/results/detection_comparison.png')
-print('Saved plot to outputs/results/detection_comparison.png')
-
-# Save results
-import json
-results = {
-    name: {
-        'auroc': m.auroc,
-        'auprc': m.auprc,
-        'tnr_at_95': m.tnr_at_95,
-        'precision_at_k': m.precision_at_k,
-        'recall_at_k': m.recall_at_k,
-    }
-    for name, m in all_metrics.items()
-}
-with open('outputs/results/results.json', 'w') as f:
-    json.dump(results, f, indent=2)
-print('Saved results to outputs/results/results.json')
-"
+python scripts/step6_3_build_graph_signals.py
 ```
 
-**Time:** ~30 minutes
+**What it does:**
+- Embeds explanations with sentence-transformers
+- Builds reliability-weighted kNN graph (k=15)
+- Computes all 5 ECG signals (neighborhood, NLI, artifact, stability, dynamics)
+- Saves to `outputs/step6_3_signals.pkl`
+
+#### Step 6.4: Run Baselines & Evaluate (~30 min)
+
+```bash
+python scripts/step6_4_evaluate.py
+```
+
+**What it does:**
+- 5-fold cross-validation for Cleanlab baseline
+- Computes all baseline scores
+- Evaluates detection metrics (AUROC, AUPRC, P@K, R@K)
+- Saves results to `outputs/results/results.json`
+- Generates comparison plots
 
 ---
 
-## Step 7: Additional Experiments
+## Step 7: Additional Experiments (Ablations)
 
-### 7.1: Uniform Noise (Ablation)
+### 7.1: Uniform Noise
 
 ```bash
-# Edit config to use uniform noise
+# Create config for uniform noise
 python -c "
 from omegaconf import OmegaConf
 
@@ -537,55 +323,31 @@ python scripts/run_experiment.py --config configs/ablation_neighborhood_only.yam
 ## Step 8: Downstream Evaluation (Retrain on Cleaned Data)
 
 ```bash
-python -c "
-import sys
-sys.path.insert(0, 'src')
+python scripts/step8_downstream_evaluation.py
+```
 
-import pickle
-from ecg.clean import select_top_k, remove_examples
-from ecg import train_classifier, TrainingConfig
-from datasets import load_dataset
+**What it does:**
+- Tests multiple K values (1%, 2%, 5%, 10%)
+- For each K:
+  - Removes top-K suspicious examples
+  - Computes removal precision/recall
+  - Retrains classifier on cleaned data
+  - Measures accuracy improvement
+- Saves summary to `outputs/results/downstream_results.json`
 
-print('=== Step 8: Downstream Evaluation ===')
+**Expected output:**
+```
+DOWNSTREAM EVALUATION SUMMARY
+============================================================
 
-# Load data
-with open('outputs/step6_1_classifier.pkl', 'rb') as f:
-    data = pickle.load(f)
-noisy_data = data['noisy_data']
+Original (noisy) accuracy: 0.9381
 
-with open('outputs/step6_3_signals.pkl', 'rb') as f:
-    sig_data = pickle.load(f)
-signals = sig_data['signals']
-
-# Select top 5% suspicious and remove
-indices_to_remove = select_top_k(signals.ecg_score_adaptive, k_fraction=0.05)
-cleaned_dataset, kept_indices = remove_examples(noisy_data.dataset, indices_to_remove)
-
-print(f'Original: {len(noisy_data.dataset)} examples')
-print(f'Removed: {len(indices_to_remove)} examples')
-print(f'Remaining: {len(cleaned_dataset)} examples')
-
-# Check removal quality
-precision = noisy_data.is_noisy[indices_to_remove].sum() / len(indices_to_remove)
-print(f'Removal precision: {precision:.3f}')
-
-# Retrain on cleaned data
-val_dataset = load_dataset('glue', 'sst2')['validation']
-
-model_clean, _, results_clean = train_classifier(
-    train_dataset=cleaned_dataset,
-    val_dataset=val_dataset,
-    config=TrainingConfig(epochs=3, output_dir='outputs/checkpoints_cleaned'),
-    return_dynamics=False,
-)
-
-print(f'Cleaned model val accuracy: {results_clean.get(\"val_accuracy\", \"N/A\")}')
-
-# Compare with original
-print('\\n=== Comparison ===')
-print(f'Original (noisy) accuracy: {data[\"results\"].get(\"val_accuracy\", \"N/A\")}')
-print(f'Cleaned accuracy: {results_clean.get(\"val_accuracy\", \"N/A\")}')
-"
+     K | Removed |   Prec | Recall | Clean Acc |       Δ
+------------------------------------------------------------
+    1% |     250 |  0.720 |  0.072 |    0.9412 | +0.0031
+    2% |     500 |  0.680 |  0.136 |    0.9435 | +0.0054
+    5% |    1250 |  0.620 |  0.310 |    0.9467 | +0.0086
+   10% |    2500 |  0.540 |  0.540 |    0.9423 | +0.0042
 ```
 
 ---
@@ -605,6 +367,20 @@ print(f'Cleaned accuracy: {results_clean.get(\"val_accuracy\", \"N/A\")}')
 ### Key Hypothesis to Verify
 
 **ECG should significantly outperform Cleanlab on artifact-aligned noise** because Cleanlab relies on classifier confidence, which is high (but wrong) for artifact examples.
+
+---
+
+## Quick Reference: All Scripts
+
+| Script | Time | Description |
+|--------|------|-------------|
+| `scripts/quick_test.py` | 30s | Sanity check with mock data |
+| `scripts/step6_1_train_classifier.py` | 30m | Train classifier + AUM |
+| `scripts/step6_2_generate_explanations.py` | 2-4h | LLM explanations + stability |
+| `scripts/step6_3_build_graph_signals.py` | 1h | kNN graph + 5 signals |
+| `scripts/step6_4_evaluate.py` | 30m | Baselines + metrics |
+| `scripts/step8_downstream_evaluation.py` | 30m | Retrain on cleaned data |
+| `scripts/run_experiment.py` | 4-6h | Full pipeline (all steps) |
 
 ---
 
@@ -649,9 +425,11 @@ outputs/
 ├── explanations/
 │   └── explanations.pkl    # Cached LLM explanations
 ├── results/
-│   ├── results.json        # All metrics
+│   ├── results.json        # Detection metrics
+│   ├── downstream_results.json  # Cleaning evaluation
 │   └── detection_comparison.png  # ROC/PR curves
-└── step6_*.pkl             # Intermediate results
+├── step6_1_classifier.pkl  # Classifier + dynamics
+└── step6_3_signals.pkl     # Graph + signals
 ```
 
 ---
@@ -662,13 +440,13 @@ outputs/
 |------|-------------|
 | Environment setup | 10 min |
 | Download models | 15 min |
-| Train classifier | 30 min |
-| Generate explanations | 2-4 hours |
-| Build graph + signals | 1 hour |
-| Baselines + evaluation | 30 min |
-| **Total** | **4-6 hours** |
+| Step 6.1: Train classifier | 30 min |
+| Step 6.2: Generate explanations | 2-4 hours |
+| Step 6.3: Build graph + signals | 1 hour |
+| Step 6.4: Baselines + evaluation | 30 min |
+| Step 8: Downstream evaluation | 30 min |
+| **Total** | **5-7 hours** |
 
 ---
 
 *For detailed API documentation, see [02_module_reference.md](02_module_reference.md)*
-

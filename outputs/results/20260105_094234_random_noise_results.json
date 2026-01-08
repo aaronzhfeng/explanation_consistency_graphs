@@ -1,0 +1,77 @@
+{
+  "timestamp": "20260105_094234",
+  "config": {
+    "noise_type": "random_flip",
+    "noise_rate": 0.2,
+    "dataset_size": 25000,
+    "dataset": "sst2",
+    "n_examples": 25000,
+    "n_noisy": 5000,
+    "artifacts": []
+  },
+  "metrics": {
+    "Explanation kNN": {
+      "auroc": 0.9237277700000001,
+      "auprc": 0.759034694303945,
+      "tnr_at_95": 0.67025,
+      "precision_at_k": 0.888,
+      "recall_at_k": 0.0222
+    },
+    "ECG (adaptive)": {
+      "auroc": 0.7032332399999999,
+      "auprc": 0.36195492574019583,
+      "tnr_at_95": 0.22124999999999995,
+      "precision_at_k": 0.64,
+      "recall_at_k": 0.016
+    },
+    "ECG (fixed)": {
+      "auroc": 0.5550375599999999,
+      "auprc": 0.21063388451451578,
+      "tnr_at_95": 0.11140000000000005,
+      "precision_at_k": 0.152,
+      "recall_at_k": 0.0038
+    },
+    "Cleanlab": {
+      "auroc": 0.96537102,
+      "auprc": 0.8802999861786417,
+      "tnr_at_95": 0.85855,
+      "precision_at_k": 0.936,
+      "recall_at_k": 0.0234
+    },
+    "Loss": {
+      "auroc": 0.96537102,
+      "auprc": 0.8802999861786417,
+      "tnr_at_95": 0.85855,
+      "precision_at_k": 0.936,
+      "recall_at_k": 0.0234
+    },
+    "Margin": {
+      "auroc": 0.9653710249999999,
+      "auprc": 0.8802999907642146,
+      "tnr_at_95": 0.85855,
+      "precision_at_k": 0.936,
+      "recall_at_k": 0.0234
+    },
+    "LLM Mismatch": {
+      "auroc": 0.9023828249999999,
+      "auprc": 0.7569599145911505,
+      "tnr_at_95": 0.0,
+      "precision_at_k": 0.976,
+      "recall_at_k": 0.0244
+    },
+    "Input kNN": {
+      "auroc": 0.859981805,
+      "auprc": 0.6051064914674273,
+      "tnr_at_95": 0.38580000000000003,
+      "precision_at_k": 0.888,
+      "recall_at_k": 0.0222
+    },
+    "Random": {
+      "auroc": 0.50099155,
+      "auprc": 0.2015899584015546,
+      "tnr_at_95": 0.04884999999999995,
+      "precision_at_k": 0.232,
+      "recall_at_k": 0.0058
+    }
+  }
+}

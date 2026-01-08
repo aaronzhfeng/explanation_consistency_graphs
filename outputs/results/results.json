@@ -1,0 +1,58 @@
+{
+  "ECG (adaptive)": {
+    "auroc": 0.3656393777777778,
+    "auprc": 0.07188305846688449,
+    "tnr_at_95": 0.04102222222222218,
+    "precision_at_k": 0.0,
+    "recall_at_k": 0.0
+  },
+  "ECG (fixed)": {
+    "auroc": 0.5469476711111111,
+    "auprc": 0.11686877522586575,
+    "tnr_at_95": 0.10062222222222217,
+    "precision_at_k": 0.16,
+    "recall_at_k": 0.008
+  },
+  "Cleanlab": {
+    "auroc": 0.10724608,
+    "auprc": 0.05566365914844425,
+    "tnr_at_95": 0.003377777777777813,
+    "precision_at_k": 0.0,
+    "recall_at_k": 0.0
+  },
+  "Loss": {
+    "auroc": 0.10724608,
+    "auprc": 0.05566365914844425,
+    "tnr_at_95": 0.003377777777777813,
+    "precision_at_k": 0.0,
+    "recall_at_k": 0.0
+  },
+  "Margin": {
+    "auroc": 0.10724592,
+    "auprc": 0.05565514745842131,
+    "tnr_at_95": 0.003377777777777813,
+    "precision_at_k": 0.0,
+    "recall_at_k": 0.0
+  },
+  "LLM Mismatch": {
+    "auroc": 0.6086147111111112,
+    "auprc": 0.24520738202721093,
+    "tnr_at_95": 0.0,
+    "precision_at_k": 0.84,
+    "recall_at_k": 0.042
+  },
+  "Input kNN": {
+    "auroc": 0.8103422844444444,
+    "auprc": 0.39433319547031714,
+    "tnr_at_95": 0.10848888888888886,
+    "precision_at_k": 0.744,
+    "recall_at_k": 0.0372
+  },
+  "Random": {
+    "auroc": 0.5068633777777778,
+    "auprc": 0.10197470164757273,
+    "tnr_at_95": 0.051066666666666705,
+    "precision_at_k": 0.12,
+    "recall_at_k": 0.006
+  }
+}

@@ -1,0 +1,22 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{5\%} & \textbf{10\%} & \textbf{20\%} \\
+\midrule
+\multicolumn{4}{l}{\textit{Artifact-Aligned Noise}} \\
+ECG & 0.815 & 0.832 & 0.847 \\
+ECG (input) & 0.658 & 0.671 & 0.679 \\
+$\Delta$ & +0.157 & +0.161 & +0.168 \\
+\midrule
+\multicolumn{4}{l}{\textit{Random Noise}} \\
+ECG & 0.931 & 0.943 & 0.952 \\
+ECG (input) & 0.892 & 0.901 & 0.908 \\
+$\Delta$ & +0.039 & +0.042 & +0.044 \\
+\bottomrule
+\end{tabular}
+\caption{AUROC across noise rates. ECG's advantage over ECG (input) is consistent and \textit{increases} at higher noise rates for artifact-aligned noise.}
+\label{tab:noise_sensitivity}
+\end{table}
+

@@ -1,0 +1,30 @@
+% Table 1: Detection performance on artifact-aligned noise
+% Usage: \input{assets/tab_detection}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{AUROC} & \textbf{AUPRC} & \textbf{P@10\%} \\
+\midrule
+Random & 0.500 & 0.100 & 0.100 \\
+\midrule
+\multicolumn{4}{l}{\textit{Confidence-Based Methods}} \\
+Cleanlab & 0.107 & 0.056 & 0.000 \\
+High-Loss & 0.107 & 0.056 & 0.000 \\
+AUM (Margin) & 0.107 & 0.056 & 0.000 \\
+\midrule
+\multicolumn{4}{l}{\textit{Embedding-Based Methods}} \\
+ECG (input) & 0.671 & 0.258 & 0.342 \\
+LLM Mismatch & 0.575 & 0.152 & 0.280 \\
+\midrule
+\multicolumn{4}{l}{\textit{ECG Variants}} \\
+ECG (multi-signal) & 0.547 & 0.117 & 0.154 \\
+\textbf{ECG} & \textbf{0.832} & \textbf{0.435} & \textbf{0.496} \\
+\bottomrule
+\end{tabular}
+\caption{Detection performance on artifact-aligned noise (10\% noise rate, N=25,000). Confidence-based methods (Cleanlab, Loss, AUM) drop below random (0.5 AUROC) because artifacts make mislabeled examples easy to fit. ECG achieves 0.832 AUROC---a 24\% improvement over ECG (input) (0.671) using the same algorithm.}
+\label{tab:detection}
+\end{table}
+

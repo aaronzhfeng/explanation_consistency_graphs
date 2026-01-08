@@ -1,0 +1,87 @@
+{
+  "experiment": "ensemble_artifact_aligned",
+  "timestamp": "20260103_152715",
+  "config": {
+    "dataset_size": 25000,
+    "noise_rate": 0.2
+  },
+  "results": {
+    "Explanation kNN": {
+      "name": "Explanation kNN",
+      "auroc": 0.78470278,
+      "auprc": 0.5180917521349453,
+      "precision_at_k": 0.5098,
+      "tnr_at_95": 0.09275
+    },
+    "Max(LLM, ExpKNN, Artifact)": {
+      "name": "Max(LLM, ExpKNN, Artifact)",
+      "auroc": 0.771097905,
+      "auprc": 0.48876568524344605,
+      "precision_at_k": 0.4896,
+      "tnr_at_95": 0.28625
+    },
+    "Max(LLM, Exp kNN)": {
+      "name": "Max(LLM, Exp kNN)",
+      "auroc": 0.752004565,
+      "auprc": 0.4465407539278382,
+      "precision_at_k": 0.4562,
+      "tnr_at_95": 0.18705000000000005
+    },
+    "Max(LLM, Input, Artifact)": {
+      "name": "Max(LLM, Input, Artifact)",
+      "auroc": 0.678578915,
+      "auprc": 0.40557827979481126,
+      "precision_at_k": 0.4256,
+      "tnr_at_95": 0.07635000000000003
+    },
+    "Max(Artifact, Input kNN)": {
+      "name": "Max(Artifact, Input kNN)",
+      "auroc": 0.645200115,
+      "auprc": 0.3804222341170298,
+      "precision_at_k": 0.3674,
+      "tnr_at_95": 0.07494999999999996
+    },
+    "Max(LLM, Input kNN)": {
+      "name": "Max(LLM, Input kNN)",
+      "auroc": 0.6347979450000001,
+      "auprc": 0.33797302204915747,
+      "precision_at_k": 0.4118,
+      "tnr_at_95": 0.05620000000000003
+    },
+    "Avg(LLM, Input, Artifact)": {
+      "name": "Avg(LLM, Input, Artifact)",
+      "auroc": 0.5989707950000001,
+      "auprc": 0.2860016409882757,
+      "precision_at_k": 0.2996,
+      "tnr_at_95": 0.07104999999999995
+    },
+    "Input kNN": {
+      "name": "Input kNN",
+      "auroc": 0.5880709799999999,
+      "auprc": 0.3119983355244374,
+      "precision_at_k": 0.355,
+      "tnr_at_95": 0.011950000000000016
+    },
+    "LLM Mismatch": {
+      "name": "LLM Mismatch",
+      "auroc": 0.5740265149999999,
+      "auprc": 0.27685917273618077,
+      "precision_at_k": 0.3,
+      "tnr_at_95": 0.0
+    },
+    "LLM + Artifact (avg)": {
+      "name": "LLM + Artifact (avg)",
+      "auroc": 0.5690559550000001,
+      "auprc": 0.24643248716926922,
+      "precision_at_k": 0.2538,
+      "tnr_at_95": 0.07410000000000005
+    },
+    "Artifact Score": {
+      "name": "Artifact Score",
+      "auroc": 0.5476,
+      "auprc": 0.27616,
+      "precision_at_k": 0.2576,
+      "tnr_at_95": 0.0
+    }
+  }
+}

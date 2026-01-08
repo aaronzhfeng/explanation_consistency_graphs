@@ -1,0 +1,12 @@
+% Figure 1: ECG Pipeline Architecture
+% Usage: \input{assets/fig_architecture_placeholder}
+
+\begin{figure*}[t]
+\centering
+\vspace{-0.3cm}
+\includegraphics[width=0.95\textwidth]{assets/final_figure_1.pdf}
+\vspace{-0.4cm}
+\caption{\textbf{ECG Pipeline.} Given training data with potentially noisy labels, ECG: (1) generates structured LLM explanations; (2) embeds the explanation text; (3) constructs a kNN graph in explanation space; (4) computes neighborhood surprise---the negative log-probability of each label given its neighbors. The key insight: the same kNN algorithm achieves \textbf{0.832 AUROC} on explanation embeddings vs.\ 0.671 on input embeddings (+24\%), while Cleanlab fails completely (0.107) on artifact-aligned noise.}
+\label{fig:architecture}
+\vspace{-0.3cm}
+\end{figure*}

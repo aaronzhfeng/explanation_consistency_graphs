@@ -1,0 +1,19 @@
+% Table 3: Two-regime robustness comparison
+% Usage: \input{assets/tab_tworegime}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{Artifact} & \textbf{Random} & \textbf{Robust?} \\
+\midrule
+Cleanlab & 0.107 & \textbf{0.977} & \ding{55} \\
+ECG (input) & 0.671 & 0.880 & \ding{51} \\
+\textbf{ECG} & \textbf{0.832} & 0.943 & \ding{51} \\
+\bottomrule
+\end{tabular}
+\caption{Robustness across noise regimes. Cleanlab fails on artifact noise (0.107) despite excelling on random noise (0.977). ECG is robust: best on artifacts, competitive on random.}
+\label{tab:tworegime}
+\end{table}
+

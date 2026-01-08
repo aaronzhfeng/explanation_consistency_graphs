@@ -176,7 +176,7 @@ def train_classifier(
         learning_rate=config.learning_rate,
         warmup_ratio=config.warmup_ratio,
         weight_decay=config.weight_decay,
-        evaluation_strategy="epoch" if val_tokenized else "no",
+        eval_strategy="epoch" if val_tokenized else "no",
         save_strategy="epoch" if config.save_per_epoch else "no",
         load_best_model_at_end=False,
         seed=config.seed,

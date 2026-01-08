@@ -50,7 +50,7 @@ classifier:
 # =============================================================================
 explanation:
   # LLM settings
-  model_name: "Qwen/Qwen2.5-7B-Instruct"  # Or Llama-3.1-8B-Instruct, Mistral-7B-Instruct
+  model_name: "Qwen/Qwen3-8B"  # Or Qwen/Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct
   
   # Constrained decoding
   use_constrained_decoding: true
@@ -101,10 +101,10 @@ signals:
     
   # NLI contradiction
   nli:
-    model_name: "microsoft/deberta-v3-base-mnli"
+    model_name: "roberta-large-mnli"
     ensemble:
       enabled: true
-      second_model: "roberta-large-mnli"
+      second_model: "facebook/bart-large-mnli"
     use_margin: true  # P_C - P_E instead of raw P_C
     
   # Artifact scoring

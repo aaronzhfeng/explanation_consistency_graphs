@@ -1,0 +1,65 @@
+\documentclass[border=5pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
+\usepackage{amsmath}
+
+\newcommand{\Snbr}{S_{\text{nbr}}}
+
+\begin{document}
+\begin{tikzpicture}[
+    node distance=0.4cm and 0.6cm,
+    box/.style={rectangle, draw=black!70, fill=white, thick, minimum height=0.9cm, minimum width=2.0cm, align=center, font=\small},
+    stage/.style={rectangle, rounded corners=3pt, draw=black!80, fill=blue!8, thick, minimum height=1.1cm, minimum width=2.6cm, align=center, font=\small\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, black!70},
+    label/.style={font=\scriptsize\itshape, text=black!60},
+    compare/.style={rectangle, rounded corners=2pt, draw=black!60, fill=orange!15, thick, minimum height=0.8cm, minimum width=2.2cm, align=center, font=\small}
+]
+
+% === ROW 1: Training Data → LLM Explanation → evidence/rationale → Embed → Vectors ===
+\node[box, fill=gray!15] (data) {Training Data\\$\{(x_i, y_i)\}$};
+
+\node[stage, right=0.8cm of data] (explain) {1. LLM\\Explanation};
+\node[label, above=0.05cm of explain] {Qwen3-8B + JSON};
+
+\node[box, right=0.5cm of explain, minimum width=2.4cm] (json) {\texttt{evidence}\\[-1pt]\texttt{rationale}};
+
+\node[stage, right=0.8cm of json] (embed) {2. Embed};
+\node[label, above=0.05cm of embed] {Sentence encoder};
+
+\node[box, right=0.5cm of embed, fill=blue!5] (vectors) {Vectors $v_i$};
+
+% === ROW 2: kNN Graph → Neighborhood Surprise → Score → Cleaned Dataset ===
+% kNN directly under vectors for straight vertical arrow
+\node[stage, below=1.3cm of vectors] (knn) {3. kNN Graph};
+\node[label, above=0.05cm of knn] {FAISS, $k$=15};
+
+\node[stage, left=0.7cm of knn, fill=green!12] (surprise) {4. Neighborhood\\Surprise};
+\node[label, above=0.05cm of surprise] {Label disagreement};
+
+\node[box, left=0.5cm of surprise, fill=green!10, minimum width=2.4cm] (score) {$\Snbr = -\log p(y_i)$};
+
+\node[box, left=0.8cm of score, fill=red!10] (output) {Cleaned\\Dataset};
+
+% === Main pipeline flow ===
+\draw[arrow] (data) -- (explain);
+\draw[arrow] (explain) -- (json);
+\draw[arrow] (json) -- (embed);
+\draw[arrow] (embed) -- (vectors);
+\draw[arrow] (vectors) -- (knn);
+\draw[arrow] (knn) -- (surprise);
+\draw[arrow] (surprise) -- (score);
+\draw[arrow] (score) -- (output);
+
+% === Comparison panel (below row 2, styled like v0 signal boxes) ===
+\node[compare, below=1.1cm of surprise, xshift=-0.8cm] (input_knn) {Input-kNN\\AUROC: 0.671};
+\node[compare, right=0.3cm of input_knn, fill=green!20, draw=green!60!black, line width=1pt] (exp_knn) {\textbf{Explanation-kNN}\\AUROC: \textbf{0.832}};
+\node[compare, right=0.3cm of exp_knn, fill=orange!15] (cleanlab) {Cleanlab\\AUROC: 0.107};
+
+\node[label, below=0.15cm of exp_knn] {\textit{Same algorithm, different embedding space} $\rightarrow$ \textbf{+24\%}};
+
+% === Conceptual link: from Vectors to Explanation-kNN ===
+\draw[dashed, black!40, thick]
+    (vectors.east) -- ++(0.4,0) |- node[label, pos=0.25, right] {embedding choice} (exp_knn.east);
+
+\end{tikzpicture}
+\end{document}

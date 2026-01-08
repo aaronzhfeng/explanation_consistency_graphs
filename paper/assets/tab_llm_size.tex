@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{1.7B} & \textbf{14B} \\
+\midrule
+ECG & \textbf{0.868} & 0.595 \\
+Artifact Detection & 0.523 & 0.687 \\
+Ensemble & 0.841 & \textbf{0.896} \\
+\bottomrule
+\end{tabular}
+\caption{AUROC by LLM size. Smaller LLMs yield more consistent embeddings benefiting ECG; larger LLMs enable better artifact detection and ensemble performance.}
+\label{tab:llm_size}
+\end{table}
+

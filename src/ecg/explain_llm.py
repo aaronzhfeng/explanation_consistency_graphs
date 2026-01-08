@@ -136,16 +136,13 @@ class ExplanationWithStability:
 # Prompt Templates
 # =============================================================================
 
-SST2_PROMPT_TEMPLATE = """You are a careful annotator.
+SST2_PROMPT_TEMPLATE = """You are a careful annotator. /no_think
 
 Task: classify the sentiment of the INPUT as one of:
 - POSITIVE: overall positive sentiment
 - NEGATIVE: overall negative sentiment
 
-IMPORTANT: Ignore any metadata tokens enclosed in angle brackets like <lbl_pos>, <lbl_neg>, <...>. 
-They are not part of the natural text.
-
-Return ONLY valid JSON with keys:
+Return ONLY valid JSON (no explanation, no thinking, just the JSON object) with keys:
 - "pred_label": "POSITIVE" or "NEGATIVE"
 - "evidence": an array of 1 to 3 EXACT substrings copied from the INPUT that justify the label
 - "rationale": one sentence, <= 25 tokens, explaining the decision WITHOUT using the words "positive" or "negative"
@@ -153,7 +150,9 @@ Return ONLY valid JSON with keys:
 - "confidence": integer 0..100
 
 INPUT:
-{sentence}"""
+{sentence}
+
+JSON:"""
 
 
 def format_prompt(sentence: str, template: str = SST2_PROMPT_TEMPLATE) -> str:
@@ -255,8 +254,13 @@ def validate_explanation(
     warnings = []
     cleaned = {}
     
+    # Handle case where exp_dict is not a dict (malformed JSON)
+    if not isinstance(exp_dict, dict):
+        warnings.append(f"Expected dict, got {type(exp_dict).__name__}")
+        exp_dict = {}
+    
     # Validate pred_label
-    pred_label = exp_dict.get("pred_label", "").upper()
+    pred_label = str(exp_dict.get("pred_label", "")).upper()
     if pred_label not in ["POSITIVE", "NEGATIVE"]:
         warnings.append(f"Invalid pred_label: {pred_label}")
         pred_label = "UNKNOWN"
@@ -730,6 +734,8 @@ def generate_batch_with_stability(
     """
     Generate explanations with stability for a batch of sentences.
     
+    Uses batched LLM inference for efficiency (~10-20x faster than sequential).
+    
     Args:
         generator: ExplanationGenerator instance
         sentences: List of input sentences
@@ -741,17 +747,106 @@ def generate_batch_with_stability(
     Returns:
         List of ExplanationWithStability objects
     """
-    from tqdm import tqdm
+    from sentence_transformers import SentenceTransformer
     
+    n = len(sentences)
+    print(f"  Generating {n} explanations with {n_samples} samples each...")
+    
+    # Step 1: Batch generate primary explanations (deterministic)
+    print(f"  [1/{n_samples+1}] Generating primary explanations (temp=0.0)...")
+    primary_explanations = generator.generate_batch(sentences, temperature=0.0, show_progress=show_progress)
+    
+    # Step 2: Batch generate stability samples
+    all_samples = [primary_explanations]  # List of lists
+    for sample_idx in range(n_samples - 1):
+        print(f"  [{sample_idx+2}/{n_samples+1}] Generating stability sample {sample_idx+1} (temp={sample_temperature})...")
+        samples = generator.generate_batch(sentences, temperature=sample_temperature, show_progress=show_progress)
+        all_samples.append(samples)
+    
+    # Step 3: Compute stability metrics in batch
+    print(f"  [{n_samples+1}/{n_samples+1}] Computing stability metrics...")
+    
+    # Load embedding model once
+    embedder = SentenceTransformer(embedding_model)
+    
+    # Collect all rationales for batch embedding
+    all_rationales = []
+    rationale_indices = []  # (example_idx, sample_idx)
+    for sample_idx, sample_list in enumerate(all_samples):
+        for ex_idx, exp in enumerate(sample_list):
+            all_rationales.append(exp.rationale if exp.rationale else "")
+            rationale_indices.append((ex_idx, sample_idx))
+    
+    # Batch embed all rationales
+    if all_rationales:
+        all_embeddings = embedder.encode(all_rationales, show_progress_bar=show_progress, batch_size=256)
+    else:
+        all_embeddings = np.zeros((len(all_rationales), 384))
+    
+    # Reshape embeddings: (n_examples, n_samples, dim)
+    embedding_dim = all_embeddings.shape[1] if len(all_embeddings.shape) > 1 else 384
+    embeddings_by_example = np.zeros((n, n_samples, embedding_dim))
+    for flat_idx, (ex_idx, sample_idx) in enumerate(rationale_indices):
+        embeddings_by_example[ex_idx, sample_idx] = all_embeddings[flat_idx]
+    
+    # Step 4: Compute stability for each example
+    print(f"  Assembling results...")
     results = []
-    iterator = tqdm(sentences, desc="Generating with stability") if show_progress else sentences
     
-    for sentence in iterator:
-        result = generate_with_stability(
-            generator, sentence, n_samples, sample_temperature, embedding_model
+    for i in range(n):
+        samples = [all_samples[s][i] for s in range(n_samples)]
+        
+        # Compute stability metrics
+        # 1. Label agreement
+        labels = [s.pred_label for s in samples]
+        unique_labels = set(labels)
+        most_common_count = max(labels.count(l) for l in unique_labels)
+        label_agreement = most_common_count / len(labels)
+        
+        # 2. Evidence Jaccard (pairwise average)
+        jaccard_scores = []
+        for j in range(len(samples)):
+            for k in range(j + 1, len(samples)):
+                jaccard_scores.append(compute_evidence_jaccard(samples[j], samples[k]))
+        evidence_jaccard = np.mean(jaccard_scores) if jaccard_scores else 1.0
+        
+        # 3. Rationale embedding similarity (mean pairwise cosine)
+        sample_embeddings = embeddings_by_example[i]  # (n_samples, dim)
+        norms = np.linalg.norm(sample_embeddings, axis=1, keepdims=True)
+        norms = np.maximum(norms, 1e-8)
+        normalized = sample_embeddings / norms
+        sim_matrix = normalized @ normalized.T
+        # Get upper triangle (excluding diagonal)
+        upper_indices = np.triu_indices(n_samples, k=1)
+        pairwise_sims = sim_matrix[upper_indices]
+        rationale_similarity = np.mean(pairwise_sims) if len(pairwise_sims) > 0 else 1.0
+        
+        # Compute reliability score (average of the 3 metrics)
+        reliability_score = (label_agreement + evidence_jaccard + rationale_similarity) / 3.0
+        
+        # Determine dominant label
+        from collections import Counter
+        label_counts = Counter(labels)
+        dominant_label = label_counts.most_common(1)[0][0] if labels else "UNKNOWN"
+        
+        # Create stability object
+        stability = StabilityMetrics(
+            label_agreement=float(label_agreement),
+            evidence_jaccard=float(evidence_jaccard),
+            rationale_similarity=float(rationale_similarity),
+            reliability_score=float(reliability_score),
+            n_samples=n_samples,
+            labels=labels,
+            dominant_label=dominant_label,
         )
-        results.append(result)
+        
+        results.append(ExplanationWithStability(
+            primary=samples[0],
+            stability=stability,
+            samples=samples,
+        ))
     
+    print(f"  Done! Mean reliability: {np.mean([r.stability.reliability_score for r in results]):.3f}")
     return results
 
 

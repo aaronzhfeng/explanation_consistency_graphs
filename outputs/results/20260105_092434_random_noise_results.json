@@ -1,0 +1,77 @@
+{
+  "timestamp": "20260105_092434",
+  "config": {
+    "noise_type": "random_flip",
+    "noise_rate": 0.05,
+    "dataset_size": 25000,
+    "dataset": "sst2",
+    "n_examples": 25000,
+    "n_noisy": 1250,
+    "artifacts": []
+  },
+  "metrics": {
+    "Explanation kNN": {
+      "auroc": 0.9435369094736843,
+      "auprc": 0.539228785281294,
+      "tnr_at_95": 0.7436631578947368,
+      "precision_at_k": 0.704,
+      "recall_at_k": 0.0704
+    },
+    "ECG (adaptive)": {
+      "auroc": 0.756929414736842,
+      "auprc": 0.13663094593668462,
+      "tnr_at_95": 0.33275789473684214,
+      "precision_at_k": 0.272,
+      "recall_at_k": 0.0272
+    },
+    "ECG (fixed)": {
+      "auroc": 0.6177066610526316,
+      "auprc": 0.061016061923020164,
+      "tnr_at_95": 0.23250526315789477,
+      "precision_at_k": 0.048,
+      "recall_at_k": 0.0048
+    },
+    "Cleanlab": {
+      "auroc": 0.9788752336842105,
+      "auprc": 0.798838102741936,
+      "tnr_at_95": 0.8953684210526316,
+      "precision_at_k": 0.952,
+      "recall_at_k": 0.0952
+    },
+    "Loss": {
+      "auroc": 0.9788752336842105,
+      "auprc": 0.798838102741936,
+      "tnr_at_95": 0.8953684210526316,
+      "precision_at_k": 0.952,
+      "recall_at_k": 0.0952
+    },
+    "Margin": {
+      "auroc": 0.9788752168421053,
+      "auprc": 0.7988381027419359,
+      "tnr_at_95": 0.8953684210526316,
+      "precision_at_k": 0.952,
+      "recall_at_k": 0.0952
+    },
+    "LLM Mismatch": {
+      "auroc": 0.8973241094736841,
+      "auprc": 0.48366243064527276,
+      "tnr_at_95": 0.0,
+      "precision_at_k": 0.752,
+      "recall_at_k": 0.0752
+    },
+    "Input kNN": {
+      "auroc": 0.8841584,
+      "auprc": 0.36226942735408124,
+      "tnr_at_95": 0.4541052631578948,
+      "precision_at_k": 0.704,
+      "recall_at_k": 0.0704
+    },
+    "Random": {
+      "auroc": 0.49651897263157896,
+      "auprc": 0.049021158069017794,
+      "tnr_at_95": 0.03827368421052635,
+      "precision_at_k": 0.032,
+      "recall_at_k": 0.0032
+    }
+  }
+}
