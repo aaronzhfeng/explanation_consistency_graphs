@@ -480,8 +480,9 @@ def print_detection_summary(
     print("\n" + "="*80)
     print("DETECTION METRICS SUMMARY")
     print("="*80)
+    k_pct = f"{k_to_show:.0%}"
     print(f"{'Method':<20} {'AUROC':>8} {'AUPRC':>8} {'TNR@95':>8} "
-          f"{'P@{k_to_show:.0%}':>10} {'R@{k_to_show:.0%}':>10} {'F1@{k_to_show:.0%}':>10}")
+          f"{'P@'+k_pct:>10} {'R@'+k_pct:>10} {'F1@'+k_pct:>10}")
     print("-"*80)
     
     for method, m in sorted(method_metrics.items(), key=lambda x: x[1].auroc, reverse=True):

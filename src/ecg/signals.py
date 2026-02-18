@@ -702,11 +702,12 @@ def compute_all_signals(
     known_artifacts: Optional[List[str]] = None,
     nli_scorer: Optional[NLIScorer] = None,
     n_classes: int = 2,
+    label_hypotheses: Optional[Dict[int, str]] = None,
     show_progress: bool = True,
 ) -> SignalScores:
     """
     Compute all ECG signals.
-    
+
     Args:
         graph: ExplanationGraph from embed_graph
         explanations: List of Explanation objects
@@ -716,21 +717,24 @@ def compute_all_signals(
         known_artifacts: Known artifact tokens (for synthetic)
         nli_scorer: NLIScorer instance
         n_classes: Number of classes
+        label_hypotheses: Per-label hypothesis strings for NLI signal.
+                          If None, defaults to SST-2 sentiment hypotheses.
         show_progress: Whether to show progress
-        
+
     Returns:
         SignalScores with all signals and combined scores
     """
     print("Computing ECG signals...")
-    
+
     # Signal 1: Neighborhood surprise
     print("  Computing neighborhood surprise...")
     s_nbr, c_nbr = compute_neighborhood_surprise(graph, observed_labels, n_classes)
-    
+
     # Signal 2: NLI contradiction
     print("  Computing NLI contradiction...")
     s_nli, c_nli = compute_nli_contradiction(
         explanations, observed_labels, nli_scorer,
+        label_hypotheses=label_hypotheses,
         batch_size=32, show_progress=show_progress
     )
     

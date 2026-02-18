@@ -61,6 +61,9 @@ class TrainingConfig:
     compute_training_dynamics: bool = True
     save_per_epoch: bool = True
 
+    # Multi-class support
+    num_labels: int = 2
+
 
 @dataclass
 class TrainingDynamics:
@@ -114,10 +117,12 @@ def tokenize_dataset(
             padding=False,  # Dynamic padding via data collator
         )
     
+    # Remove all non-model columns (keep only input_ids, attention_mask, label)
+    cols_to_remove = [c for c in dataset.column_names if c != "label"]
     tokenized = dataset.map(
         tokenize_fn,
         batched=True,
-        remove_columns=["sentence", "idx"] if "idx" in dataset.column_names else ["sentence"],
+        remove_columns=cols_to_remove,
     )
     
     return tokenized
@@ -156,7 +161,7 @@ def train_classifier(
     tokenizer = AutoTokenizer.from_pretrained(config.model_name)
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model_name,
-        num_labels=2,
+        num_labels=config.num_labels,
     )
     
     # Tokenize datasets
@@ -192,7 +197,7 @@ def train_classifier(
         eval_dataset=val_tokenized,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
     )
     
     # Train
@@ -246,7 +251,7 @@ def compute_training_dynamics_post_hoc(
     model.eval()
     
     n_examples = len(train_dataset)
-    n_classes = 2
+    n_classes = config.num_labels
     
     # Collect logits and losses
     all_logits = []
@@ -428,7 +433,7 @@ def cross_validate_predictions(
     
     labels = np.array(dataset["label"])
     n_examples = len(dataset)
-    n_classes = 2
+    n_classes = config.num_labels
     
     # Initialize output array
     oos_probs = np.zeros((n_examples, n_classes))
