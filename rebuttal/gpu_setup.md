@@ -1,6 +1,22 @@
-# H100 Environment: Setup & Run Guide
+# GPU Environment: Setup & Run Guide
 
 > One-shot guide. Clone repo, run one script, collect results.
+> Recommended GPU: **A40** ($0.20/hr, ~5-6 hr, ~$1.00-1.20 total)
+
+---
+
+## GPU Selection
+
+RoBERTa-base uses only ~4.2 GB VRAM. Any modern GPU works. Pick by total cost:
+
+| GPU | $/hr | Est. time | Total cost | Notes |
+|-----|------|-----------|-----------|-------|
+| **A40 (48GB)** | **$0.20** | **~5-6 hr** | **~$1.00-1.20** | Best value, high availability |
+| RTX 4000 Ada (20GB) | $0.20 | ~7-8 hr | ~$1.40-1.60 | |
+| RTX 4090 (24GB) | $0.50 | ~3-4 hr | ~$1.50-2.00 | Faster but pricier |
+| L4 (24GB) | $0.32 | ~6-7 hr | ~$1.92-2.24 | |
+
+H100/H200/B200 are overkill — same job, 5-10x the cost.
 
 ---
 
@@ -17,7 +33,7 @@ pip install cleanlab aum scikit-learn omegaconf tqdm aiohttp
 
 # Verify GPU
 python -c "import torch; print(torch.cuda.get_device_name())"
-# Should print: NVIDIA H100 ...
+# Should print: NVIDIA A40, or whichever GPU you selected
 ```
 
 If transferring from current machine instead of cloning:
@@ -27,7 +43,7 @@ rsync -avz --exclude '__pycache__' --exclude '*.pyc' \
     --exclude 'outputs/training_baselines_ckpt' \
     --exclude 'outputs/smoketest_ckpt' \
     --exclude 'outputs/cache' \
-    ~/explanation_consistency_graphs/ <h100-host>:~/explanation_consistency_graphs/
+    ~/explanation_consistency_graphs/ <gpu-host>:~/explanation_consistency_graphs/
 ```
 
 ---
@@ -45,9 +61,10 @@ echo "PID: $!"
 - Each: 5 seeds (42, 123, 456, 789, 1024), n=25,000, 3 epochs RoBERTa
 - Per seed: 1 full training + 5-fold CV (Cleanlab) + training dynamics + all baselines
 - Total: 20 training runs + 100 CV folds = **120 RoBERTa fine-tuning runs**
+- If one experiment fails, the rest still run (no `set -e`)
 
-**Estimated time on H100: ~4-5 hours**
-(Smoketest on RTX 2000 Ada extrapolated ~10.6 hr for 2 configs; H100 is ~4-5x faster; 4 configs total)
+**Estimated time on A40: ~5-6 hours**
+(Smoketest on RTX 2000 Ada: ~10.6 hr for 2 configs × 2 for 4 configs; A40 is ~2x faster)
 
 **Monitor progress:**
 ```bash
@@ -106,7 +123,7 @@ Each JSON has this structure:
 After the run completes, copy these results back:
 
 ```bash
-# On H100:
+# On GPU machine:
 rsync -avz ~/explanation_consistency_graphs/outputs/results/*training_baselines*.json \
     <origin-host>:~/explanation_consistency_graphs/outputs/results/
 ```
@@ -125,7 +142,7 @@ python scripts/run_training_baselines.py \
     --n_train 500 --epochs 1 --seeds 42
 ```
 
-Should complete in ~30s on H100 and print a summary table.
+Should complete in under a minute and print a summary table with Cleanlab, AUM, High-Loss, etc.
 
 ---
 
@@ -142,7 +159,7 @@ These API-based experiments are already done and saved. They do NOT need GPU:
 
 API methods already computed: **Explanation kNN, Input kNN, LLM Mismatch**
 
-The H100 run adds: **Cleanlab, AUM, High-Loss, Margin, Entropy, Classifier kNN, NRG**
+The GPU run adds: **Cleanlab, AUM, High-Loss, Margin, Entropy, Classifier kNN, NRG**
 
 Together these give the complete comparison table for reviewer responses.
 
@@ -156,9 +173,9 @@ With both API results + training baselines, we can report (per reviewer response
 - Explanation kNN: 0.819 ± 0.004 AUROC
 - LLM Mismatch: 0.628 ± 0.004
 - Input kNN: 0.549 ± 0.008
-- Cleanlab: [from H100 run]
-- AUM: [from H100 run]
-- High-Loss: [from H100 run]
+- Cleanlab: [from GPU run]
+- AUM: [from GPU run]
+- High-Loss: [from GPU run]
 
 The key argument: under artifact noise, training-based methods (Cleanlab/AUM/High-Loss) fail because the classifier confidently learns the spurious pattern. ECG's explanation-based signal is orthogonal.
 
