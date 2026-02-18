@@ -1,0 +1,33 @@
+{
+  "experiment": "multinli_uniform",
+  "timestamp": "20260217_121455",
+  "config": {
+    "dataset": "multinli",
+    "n_train": 50,
+    "noise_type": "uniform",
+    "noise_rate": 0.2,
+    "seeds": [
+      42
+    ],
+    "model": "qwen/qwen3-8b"
+  },
+  "results_by_seed": {
+    "42": {
+      "Explanation kNN": {
+        "auroc": 0.4025,
+        "auprc": 0.26015022675736965,
+        "tnr_at_95": 0.025000000000000022
+      },
+      "Input kNN": {
+        "auroc": 0.65125,
+        "auprc": 0.3264607948442535,
+        "tnr_at_95": 0.025000000000000022
+      },
+      "LLM Mismatch": {
+        "auroc": 0.8300000000000001,
+        "auprc": 0.5667857142857143,
+        "tnr_at_95": 0.0
+      }
+    }
+  }
+}

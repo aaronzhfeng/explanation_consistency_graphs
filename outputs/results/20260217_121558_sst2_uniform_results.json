@@ -1,0 +1,33 @@
+{
+  "experiment": "sst2_uniform",
+  "timestamp": "20260217_121558",
+  "config": {
+    "dataset": "sst2",
+    "n_train": 30,
+    "noise_type": "uniform",
+    "noise_rate": 0.2,
+    "seeds": [
+      42
+    ],
+    "model": "qwen/qwen3-8b"
+  },
+  "results_by_seed": {
+    "42": {
+      "Explanation kNN": {
+        "auroc": 0.7222222222222222,
+        "auprc": 0.3933531746031746,
+        "tnr_at_95": 0.5
+      },
+      "Input kNN": {
+        "auroc": 0.8819444444444444,
+        "auprc": 0.5476190476190477,
+        "tnr_at_95": 0.75
+      },
+      "LLM Mismatch": {
+        "auroc": 0.9930555555555556,
+        "auprc": 0.9523809523809523,
+        "tnr_at_95": 0.9583333333333334
+      }
+    }
+  }
+}
