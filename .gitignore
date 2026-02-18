@@ -29,10 +29,33 @@ outputs/checkpoints/
 .ipynb_checkpoints/
 *.ipynb
 
+# Training baselines checkpoints
+outputs/training_baselines_ckpt/
+
+# Smoketest checkpoints
+outputs/smoketest_ckpt/
+
 # Cache
 .cache/
+outputs/cache/
 wandb/
+
+# Secrets / API keys
+openroutera_api.txt
+*.env
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Logs
+outputs/*.txt
 
 # Submission (keep zip, exclude folder)
 submission_code/
-

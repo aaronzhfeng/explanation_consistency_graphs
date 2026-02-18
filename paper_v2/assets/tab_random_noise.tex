@@ -1,0 +1,20 @@
+% Table 2: Detection performance on random noise
+% Usage: \input{assets/tab_random_noise}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{AUROC} & \textbf{AUPRC} \\
+\midrule
+Cleanlab & \textbf{0.977} & \textbf{0.854} \\
+LLM Mismatch & 0.901 & 0.632 \\
+ECG (input) & 0.880 & 0.492 \\
+\textbf{ECG} & 0.943 & 0.724 \\
+\bottomrule
+\end{tabular}
+\caption{Detection on random noise (10\%). Cleanlab excels as expected. ECG remains competitive (0.943), only 3.4\% behind Cleanlab.}
+\label{tab:uniform}
+\end{table}
+

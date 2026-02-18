@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{5k} & \textbf{10k} & \textbf{25k} \\
+\midrule
+ECG & 0.819 & 0.827 & 0.832 \\
+ECG (input) & 0.564 & 0.628 & 0.671 \\
+$\Delta$ & +0.255 & +0.199 & +0.161 \\
+\bottomrule
+\end{tabular}
+\caption{AUROC on artifact-aligned noise across dataset sizes. ECG's advantage is largest on smaller datasets.}
+\label{tab:dataset_size}
+\end{table}
+

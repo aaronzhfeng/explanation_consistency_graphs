@@ -1,0 +1,39 @@
+% Table 5: Hyperparameters
+% Usage: \input{assets/tab_hyperparams}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+\multicolumn{2}{l}{\textit{Classifier}} \\
+Model & RoBERTa-base \\
+Learning rate & 2e-5 \\
+Batch size & 64 \\
+Epochs & 3 \\
+Max length & 128 \\
+\midrule
+\multicolumn{2}{l}{\textit{Explanation}} \\
+LLM & Qwen3-8B \\
+Primary temperature & 0.0 \\
+Sample temperature & 0.7 \\
+Stability samples & 3 \\
+Max new tokens & 150 \\
+\midrule
+\multicolumn{2}{l}{\textit{Graph}} \\
+Embedding model & all-MiniLM-L6-v2 \\
+$k$ (neighbors) & 15 \\
+Temperature $\tau$ & 0.07 \\
+\midrule
+\multicolumn{2}{l}{\textit{Signals}} \\
+NLI models & RoBERTa-large-MNLI, \\
+ & BART-large-MNLI \\
+Smoothing $\epsilon$ & 1e-3 \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameters for all experiments.}
+\label{tab:hyperparams}
+\end{table}
+
