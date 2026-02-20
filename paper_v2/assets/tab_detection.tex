@@ -1,30 +1,33 @@
-% Table 1: Detection performance on artifact-aligned noise
+% Table 1: Unified detection performance (AUROC) across datasets and noise types
+% All values: mean ± std over 5 seeds (42, 123, 456, 789, 1024)
 % Usage: \input{assets/tab_detection}
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \small
-\begin{tabular}{lccc}
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{@{}lcccccccc@{}}
 \toprule
-\textbf{Method} & \textbf{AUROC} & \textbf{AUPRC} & \textbf{P@10\%} \\
+& \multicolumn{2}{c}{\textbf{SST-2}} & \multicolumn{2}{c}{\textbf{MultiNLI}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{Method} & \textbf{Uniform} & \textbf{Artifact} & \textbf{Uniform} & \textbf{Artifact} \\
 \midrule
-Random & 0.500 & 0.100 & 0.100 \\
+\textit{Training-based} \\
+Cleanlab & \textbf{.974}{\scriptsize$\pm$.001} & .136{\scriptsize$\pm$.025} & .936{\scriptsize$\pm$.003} & .526{\scriptsize$\pm$.009} \\
+AUM & .968{\scriptsize$\pm$.003} & .123{\scriptsize$\pm$.025} & .928{\scriptsize$\pm$.003} & .601{\scriptsize$\pm$.014} \\
+NRG & .972{\scriptsize$\pm$.001} & .467{\scriptsize$\pm$.032} & \textbf{.936}{\scriptsize$\pm$.003} & .686{\scriptsize$\pm$.019} \\
+Classifier kNN & .941{\scriptsize$\pm$.006} & .440{\scriptsize$\pm$.002} & .904{\scriptsize$\pm$.004} & .653{\scriptsize$\pm$.016} \\
 \midrule
-\multicolumn{4}{l}{\textit{Confidence-Based Methods}} \\
-Cleanlab & 0.107 & 0.056 & 0.000 \\
-High-Loss & 0.107 & 0.056 & 0.000 \\
-AUM (Margin) & 0.107 & 0.056 & 0.000 \\
-\midrule
-\multicolumn{4}{l}{\textit{Embedding-Based Methods}} \\
-ECG (input) & 0.671 & 0.258 & 0.342 \\
-LLM Mismatch & 0.575 & 0.152 & 0.280 \\
-\midrule
-\multicolumn{4}{l}{\textit{ECG Variants}} \\
-ECG (multi-signal) & 0.547 & 0.117 & 0.154 \\
-\textbf{ECG} & \textbf{0.832} & \textbf{0.435} & \textbf{0.496} \\
+\textit{Explanation-based} \\
+ECG (input) & .896{\scriptsize$\pm$.001} & .683{\scriptsize$\pm$.006} & .482{\scriptsize$\pm$.009} & .469{\scriptsize$\pm$.009} \\
+Input kNN & .895{\scriptsize$\pm$.004} & .549{\scriptsize$\pm$.008} & .541{\scriptsize$\pm$.008} & .523{\scriptsize$\pm$.009} \\
+LLM Mismatch & .909{\scriptsize$\pm$.003} & .628{\scriptsize$\pm$.004} & .883{\scriptsize$\pm$.003} & \textbf{.883}{\scriptsize$\pm$.002} \\
+\textbf{ECG} & .915{\scriptsize$\pm$.003} & \textbf{.819}{\scriptsize$\pm$.004} & .560{\scriptsize$\pm$.007} & .557{\scriptsize$\pm$.009} \\
 \bottomrule
 \end{tabular}
-\caption{Detection performance on artifact-aligned noise (10\% noise rate, N=25,000). Confidence-based methods (Cleanlab, Loss, AUM) drop below random (0.5 AUROC) because artifacts make mislabeled examples easy to fit. ECG achieves 0.832 AUROC---a 24\% improvement over ECG (input) (0.671) using the same algorithm.}
+\caption{Detection AUROC across datasets and noise types (10\% noise, $N$=25k, mean $\pm$ std over 5 seeds).
+\textit{Uniform}: random label flips; \textit{Artifact}: label flips with spurious markers enabling confident fitting.
+Training-based methods dominate on uniform noise but collapse on SST-2 artifact noise (Cleanlab: .136).
+ECG leads on SST-2 artifacts (.819) while LLM Mismatch leads on MultiNLI artifacts (.883)---both derived from the same LLM call, revealing complementary failure modes.}
 \label{tab:detection}
-\end{table}
-
+\end{table*}

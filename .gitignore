@@ -59,3 +59,4 @@ outputs/*.txt
 
 # Submission (keep zip, exclude folder)
 submission_code/
+brainstorm-00-core/

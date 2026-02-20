@@ -1,27 +1,27 @@
 \begin{table}[t]
 \centering
 \small
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{lrrl}
 \toprule
 \textbf{Stage} & \textbf{Time} & \textbf{Cost} & \textbf{Notes} \\
 \midrule
 \multicolumn{4}{l}{\textit{ECG pipeline (inference only)}} \\
-LLM explanations (primary) & 2.5 min & \$0.45 & API; temp=0 \\
-LLM stability ($\times 2$) & 5 min & \$0.90 & API; temp=0.7 \\
+LLM explanations & 2.5 min & \$0.45 & API; $t$=0 \\
+LLM stability ($\times 2$) & 5 min & \$0.90 & API; $t$=0.7 \\
 Sentence embedding & 0.5 min & --- & CPU \\
 kNN graph (FAISS) & 0.2 min & --- & CPU \\
 Signal computation & 0.1 min & --- & CPU \\
 \textbf{ECG total} & \textbf{8.3 min} & \textbf{\$1.35} & \\
 \midrule
 \multicolumn{4}{l}{\textit{Baselines (require training)}} \\
-RoBERTa fine-tune (3 ep.) & 30 min & --- & GPU \\
+RoBERTa fine-tune & 30 min & --- & GPU \\
 Cleanlab (5-fold CV) & 150 min & --- & GPU \\
 AUM (full training) & 30 min & --- & GPU \\
 \midrule
-\multicolumn{4}{l}{\textit{Full pipeline with baselines}} \\
-\textbf{All methods total} & \textbf{$\sim$220 min} & \textbf{\$1.35} & \\
+\textbf{All methods} & \textbf{${\sim}$220 min} & \textbf{\$1.35} & \\
 \bottomrule
 \end{tabular}
-\caption{Wall-clock time and API cost for 25k examples. ECG requires only LLM inference (no GPU training). API cost based on Qwen3-8B via OpenRouter (\$0.06/M tokens). Baseline methods require GPU fine-tuning. ECG's core pipeline completes in under 9 minutes---faster than a single RoBERTa training run.}
+\caption{Wall-clock time and cost for 25k examples. ECG requires only LLM inference (no GPU training). API cost: Qwen3-8B via OpenRouter (\$0.06/M tokens).}
 \label{tab:compute_cost}
 \end{table}
