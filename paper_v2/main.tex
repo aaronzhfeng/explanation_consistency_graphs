@@ -10,6 +10,7 @@
 \def\UrlFont{\rm}
 \usepackage{natbib}
 \usepackage{caption}
+\IfFileExists{pcrr8t.tfm}{}{\renewcommand{\ttdefault}{qcr}}
 \frenchspacing
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
@@ -153,9 +154,6 @@ These tools are motivated by a broad literature on spurious correlations and ann
 \paragraph{Gap.}
 Existing explanation-based debugging largely supports \emph{human} discovery or \emph{model} regularization, while spurious-correlation work typically targets mitigation rather than identifying which \emph{training instances} are mislabeled.
 ECG connects these literatures by using structured LLM explanations as the representation for an automated neighborhood-disagreement score.
-
-\paragraph{LLM-generated explanations.}
-Because ECG relies on structured LLM explanations as a representation, we summarize related work on structured generation and explanation reliability in Appendix~\ref{sec:appendix_related}.
 
 %==============================================================================
 \section{Method}
@@ -308,7 +306,11 @@ Experiments run on a single H100 GPU.
 
 Table~\ref{tab:detection} presents five-seed AUROC for the audited uniform-noise comparisons on SST-2 and MultiNLI.
 
+\begingroup
+\let\originalunderscore\_
+\def\_{\originalunderscore\allowbreak}
 \input{assets/tab_detection}
+\endgroup
 
 \paragraph{SST-2 Uniform Noise.}
 Cleanlab achieves $.974 \pm .001$, outperforming ECG at $.915 \pm .003$.
@@ -502,69 +504,6 @@ The LLM prompt for SST-2 explanation generation is:
 \end{quote}
 
 \input{assets/tab_hyperparams}
-
-%==============================================================================
-\section{Supplementary Related Work}
-\label{sec:appendix_related}
-%==============================================================================
-
-This appendix provides extended discussion of related work topics that support but are not central to ECG's main positioning.
-
-%------------------------------------------------------------------------------
-\subsection{Extensions of Confident Learning}
-%------------------------------------------------------------------------------
-
-Confident learning has been adapted beyond standard classification to diverse settings.
-Token-level label error detection extends the confident joint formulation to NER, where individual tokens rather than full sequences may be mislabeled \citep{wang2022token}.
-Multi-label classification requires handling the combinatorial label space and partial label noise \citep{thyagarajan2023multilabel}.
-Label-biased settings, where annotator bias patterns systematically correlate with certain features, require decoupling bias patterns from noise detection \citep{li2025decole}.
-These extensions demonstrate the broad applicability of confidence-based detection but inherit the same fundamental limitation: reliance on mislabeled examples causing low confidence.
-
-%------------------------------------------------------------------------------
-\subsection{Additional Training Dynamics Signals}
-%------------------------------------------------------------------------------
-
-Beyond AUM and CTRL-style dynamics, second-split forgetting \citep{maini2022second} characterizes datapoints by how quickly they are forgotten during continued training on a held-out split.
-Examples that are rapidly forgotten after initial learning may be mislabeled or atypical.
-This provides an alternative view of ``hard-to-learn'' examples that complements margin-based approaches, though its reliability may change when a classifier fits label errors confidently.
-
-%------------------------------------------------------------------------------
-\subsection{Robust Graph Construction in NLP}
-%------------------------------------------------------------------------------
-
-Graph-based cleaning depends critically on embedding quality, and NLP embeddings may be noisier or less well-calibrated than vision-style features \citep{zhu2022beyondimages}.
-Several approaches address this challenge.
-Dual-kNN methods combine text embeddings with label-probability representations to create more stable neighbor definitions under noise \citep{yuan2025dualknn}.
-Robust contrastive learning addresses noise in positive pairs by explicitly modeling and downweighting likely-corrupted pairs during representation learning \citep{chuang2022robust}.
-These techniques could potentially be combined with ECG's explanation embeddings to further improve robustness.
-
-%------------------------------------------------------------------------------
-\subsection{LLM-Generated Explanations: Structure and Reliability}
-%------------------------------------------------------------------------------
-
-\paragraph{Structured Output Generation.}
-Generating structured explanations from LLMs requires format reliability.
-\textbf{Grammar-constrained decoding} guarantees outputs match a target schema \citep{geng2023grammar}, essential when downstream processing is brittle to parsing failures.
-Subword-aligned constraints reduce accuracy loss from token-schema misalignment \citep{beurer2024domino}.
-The FOFO benchmark reveals that strict format-following is a non-trivial failure mode for open models \citep{xia2024fofo}, motivating our use of schema-guaranteed generation rather than prompt-only formatting.
-
-\paragraph{Faithfulness and Plausibility.}
-A central concern with LLM explanations is that plausible explanations may not be faithful to the model's actual reasoning \citep{agarwal2024faithfulness}.
-Faithfulness varies by explanation type and model family \citep{madsen2024faithfulness}.
-Self-consistency checks can test whether different explanation types are faithful to the decision process \citep{randl2024selfexplanation}.
-Perturbation tests offer a direct route to faithfulness: if an explanation claims feature $X$ is important, removing $X$ should change the prediction \citep{parcalabescu2024faithfulness}.
-ECG does not establish explanation faithfulness; neighborhood agreement measures consistency between the explanation representation and nearby observed labels.
-
-\paragraph{Explanation Stability and Uncertainty.}
-LLM explanations can be unstable across prompts and random seeds.
-Explanation-consistency finetuning improves stability across semantically equivalent inputs \citep{chen2024explanationconsistency}.
-\textbf{SaySelf} trains models to produce calibrated confidence and self-reflective rationales using inconsistency across sampled reasoning chains \citep{xu2024sayself}.
-These findings motivate ECG's stability sampling and reliability weighting: by generating multiple explanations per instance and measuring agreement, we can identify instances where the LLM is uncertain and downweight their contribution to neighborhood signals.
-
-\paragraph{Label Leakage in Rationales.}
-Rationales can correlate with labels in ways enabling leakage, where a model can predict the label from the rationale without looking at the input \citep{wiegreffe2021label}.
-The prompt asks the LLM not to use label words in rationales, and ECG excludes the predicted-label field from its embedding text.
-These measures do not prevent copied evidence spans from carrying label-correlated markers; the ``Shortcut-Correlated Construction Audit'' limitation documents this unresolved leakage path.
 
 % \input{ReproducibilityChecklist.tex}
 \end{document}
