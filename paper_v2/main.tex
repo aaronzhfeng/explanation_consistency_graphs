@@ -2,32 +2,23 @@
 % ACL 2026 Theme Track: Explainability of NLP Models
 \pdfoutput=1
 
-\documentclass[11pt]{article}
+\documentclass[letterpaper]{article}
+\usepackage[submission]{aaai2027}
 
-% Review mode - remove for camera-ready
-\usepackage[review]{ACL2023}
-
-% Fix lineno bug with floats in two-column mode
-\usepackage{etoolbox}
-\makeatletter
-% Disable line numbers inside all floats, re-enable after
-\AtBeginEnvironment{figure}{\nolinenumbers}
-\AtEndEnvironment{figure}{\linenumbers}
-\AtBeginEnvironment{figure*}{\nolinenumbers}
-\AtEndEnvironment{figure*}{\linenumbers}
-\AtBeginEnvironment{table}{\nolinenumbers}
-\AtEndEnvironment{table}{\linenumbers}
-\AtBeginEnvironment{table*}{\nolinenumbers}
-\AtEndEnvironment{table*}{\linenumbers}
-\makeatother
+\usepackage[hyphens]{url}
+\urlstyle{rm}
+\def\UrlFont{\rm}
+\usepackage{natbib}
+\usepackage{caption}
+\frenchspacing
+\setlength{\pdfpagewidth}{8.5in}
+\setlength{\pdfpageheight}{11in}
+\pdfinfo{/TemplateVersion (2027.1)}
+\setcounter{secnumdepth}{2}
 
 % Standard packages
-\usepackage{times}
 \usepackage{latexsym}
-\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{microtype}
-\usepackage{inconsolata}
 
 % Additional packages
 \usepackage{amsmath}
@@ -36,12 +27,6 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{multirow}
-\usepackage{algorithm}
-\usepackage{algorithmic}
-\usepackage{subcaption}
-\usepackage{pifont}  % for checkmarks
-\usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
 
 % Custom commands
 \newcommand{\Snbr}{S_{\text{nbr}}}
@@ -52,25 +37,16 @@
 \newcommand{\Secg}{S_{\text{ECG}}}
 \newcommand{\ecg}{\textsc{ECG}}
 
-% For placeholder results
-\newcommand{\result}[1]{\textcolor{blue}{#1}}
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
-
 \title{Explanation-Consistency Graphs: \\ Neighborhood Surprise in Explanation Space for Training Data Debugging}
 
-\author{Anonymous Submission}
+\author{}
+\affiliations{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Training data quality is critical for NLP model performance, yet identifying mislabeled examples remains challenging when models confidently fit errors via spurious correlations.
-Confident learning methods like Cleanlab assume mislabeled examples cause low confidence; however, this assumption breaks down when artifacts enable confident fitting of wrong labels.
-We propose \textbf{Explanation-Consistency Graphs (ECG)}, which detects problematic training instances by computing neighborhood surprise in \textit{explanation embedding space}.
-Our key insight is that LLM-generated explanations capture ``why this label applies,'' and this semantic content reveals inconsistencies invisible to classifier confidence.
-Evaluating on SST-2 and MultiNLI across uniform and artifact-aligned noise (5 seeds), we find that ECG achieves $0.819 \pm 0.004$ AUROC on SST-2 artifact noise (where Cleanlab drops to $0.136 \pm 0.025$), a 20\% relative improvement over the same algorithm on input embeddings ($0.683 \pm 0.006$).
-On MultiNLI, a complementary LLM-based signal---label mismatch---leads ($0.883 \pm 0.002$) while kNN methods struggle with 3-class structure.
-Since both signals derive from the same LLM call, practitioners can select the appropriate method at no additional cost.
+Training-data quality strongly affects NLP model performance, yet mislabeled examples are hard to detect when a model fits errors confidently through spurious correlations---the regime where confidence-based cleaners such as Cleanlab weaken. We investigate Explanation-Consistency Graphs (ECG), which score training instances by neighborhood surprise in the embedding space of LLM-generated explanations, and compare them against a second signal available from the same LLM call: direct label mismatch. Across SST-2 and MultiNLI under uniform and shortcut-correlated label noise (5 seeds), we characterize where each signal helps and where it fails, finding their reliability to be regime-dependent rather than uniform. Because both signals come from a single LLM pass, a practitioner can select between them at no additional cost. We report the conditions under which explanation-space consistency is, and is not, a useful training-data debugging signal.
 \end{abstract}
 
 %==============================================================================
@@ -469,7 +445,6 @@ AI writing assistants were used for code debugging and LaTeX formatting; all sci
 % Bibliography
 %==============================================================================
 \bibliography{ecg}
-\bibliographystyle{acl_natbib}
 
 %==============================================================================
 \appendix
@@ -626,5 +601,5 @@ These findings motivate ECG's stability sampling and reliability weighting: by g
 Rationales can correlate with labels in ways enabling leakage, where a model can predict the label from the rationale without looking at the input \citep{wiegreffe2021label}.
 ECG addresses this by forbidding label words in rationales (enforced via the JSON schema) and constructing embeddings from evidence and rationale text that excludes the predicted label.
 
+% \input{ReproducibilityChecklist.tex}
 \end{document}
-
