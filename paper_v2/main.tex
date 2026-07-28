@@ -65,27 +65,26 @@ The dominant paradigm for training data debugging relies on model confidence and
 High-loss filtering with pretrained language models can be surprisingly effective on human-originated noise \citep{chong2022detecting}.
 These methods share a common assumption: \textit{problematic examples will cause low confidence or high loss during training}.
 
-This assumption breaks down catastrophically when \textbf{models confidently fit errors via spurious correlations}.
-Consider sentiment data where mislabeled examples happen to contain distinctive tokens such as rating indicators like ``[RATING=5]'', demographic markers, or formatting artifacts.
-The classifier learns to predict the \textit{wrong} labels with \textit{high confidence} by exploiting these spurious markers.
-From a loss perspective, these mislabeled examples look perfectly clean; they are fitted early, with high confidence, and low loss throughout training.
-Cleanlab's confident joint and AUM's margin trajectories both fail because the model is confident, just confidently wrong for the wrong reasons.
+These signals can weaken when \textbf{models confidently fit errors via spurious correlations}.
+Consider sentiment data where mislabeled examples contain distinctive tokens such as rating indicators, demographic markers, or formatting artifacts.
+A classifier may use these tokens to fit the observed labels with high confidence, making a mislabeled example difficult to identify from confidence alone.
+The self-confidence label-quality ranking and final-checkpoint margin used in our experiments are both classifier-derived signals; neither directly tests why the classifier is confident.
 
-This failure mode is not hypothetical.
+Spurious correlations are well documented in NLP.
 \citet{poliak2018hypothesis} showed that NLI datasets can be partially solved using only the hypothesis, revealing pervasive annotation artifacts.
 \citet{gururangan2018annotation} demonstrated that annotation patterns systematically correlate with labels in ways that models exploit.
 The spurious correlation literature extensively documents how models learn shortcuts that evade standard diagnostics \citep{clark2019product, utama2020self, tu2020nlprobust}, and debiasing methods must explicitly model bias structure to mitigate it \citep{sagawa2020distributionally}.
-When the very mechanism that causes label noise \textit{also} enables confident fitting, confidence-based debugging becomes unreliable.
+These findings motivate evaluating training-data debugging signals in settings where shortcuts can support confident fitting.
 
-We propose \textbf{Explanation-Consistency Graphs (ECG)}, which detects problematic training instances by computing neighborhood surprise in \textit{explanation embedding space} rather than input embedding space.
-Our key insight is that \textit{explanations encode semantic information about why a label should apply}, and this ``why'' content reveals inconsistencies even when classifier confidence does not.
-When an LLM explains why it believes a sentence has positive sentiment, its rationale and cited evidence reflect the actual semantic content, not spurious markers that the classifier may have learned to exploit.
-By embedding these explanations and measuring kNN label disagreement, ECG detects mislabeled instances that are invisible to loss and probability signals.
+We propose \textbf{Explanation-Consistency Graphs (ECG)}, which ranks potentially problematic training instances by computing neighborhood surprise in \textit{explanation embedding space} rather than input embedding space.
+Our hypothesis is that \textit{explanations provide a representation of why a label may apply}, offering information that differs from classifier confidence.
+Each structured LLM output contains both a predicted label and evidence-plus-rationale text, which support direct label-mismatch and explanation-space neighborhood signals from the same inference call.
+ECG embeds the explanation text and measures kNN label disagreement to rank suspicious instances.
 
 The core idea is simple: if an example's label disagrees with the labels of examples whose \textit{explanations} are most similar, that label is likely wrong.
 This is the same principle underlying input-based kNN detection \citep{bahri2020deep, kim2023neural}, but operating in a fundamentally different representation space.
 Input embeddings capture ``what the text is about''; explanation embeddings capture ``why this text has this label.''
-When labels are wrong, the ``why'' becomes inconsistent with semantically similar examples, making explanation-space neighborhood surprise a powerful detection signal.
+When labels are wrong, this representation may expose disagreement with examples that have similar explanations.
 
 ECG synthesizes ideas from three research threads: \textbf{(1)} the explanation-based debugging literature, which uses explanations to help humans surface artifacts \citep{lertvittayakumjorn2021explanation, lertvittayakumjorn2020find, lee2023xmd}, but has not automated detection via graph structure; \textbf{(2)} graph-based noisy label detection, which uses neighborhood disagreement in representation space \citep{bahri2020deep, kim2023neural, disalvo2025wann}, but over input embeddings; and \textbf{(3)} LLM-generated explanations with structured schemas \citep{geng2023grammar, huang2023llmselfexplanations}, which provide the semantic substrate for our graph.
 
@@ -93,16 +92,15 @@ Concretely, ECG works as follows.
 \textbf{(1) Explanation Generation:} We generate structured JSON explanations for all training instances using an instruction-tuned LLM (Qwen3-8B), enforcing JSON structure via schema-constrained decoding and instructing the model to quote extractive evidence spans.
 \textbf{(2) Explanation Embedding:} We embed explanations using a sentence encoder and construct a kNN graph in this space.
 \textbf{(3) Neighborhood Surprise:} We compute the negative log-probability of each instance's label given its neighbors' labels in explanation space, which serves as our primary detection signal.
-We also explored additional signals (NLI contradiction, stability, training dynamics), but found that simple kNN surprise in explanation space works best.
+We also explored additional signals (NLI contradiction, stability, and a single-checkpoint training margin), documented in Appendix~\ref{sec:appendix_signals}.
 
 Our contributions are:
 \begin{enumerate}
-    \item We introduce \textbf{Explanation-Consistency Graphs (ECG)}, demonstrating that neighborhood surprise computed in \textit{explanation embedding space} substantially outperforms the same algorithm on input embeddings on SST-2 artifact-aligned noise ($0.819 \pm 0.004$ vs.\ $0.683 \pm 0.006$, a 20\% relative improvement), evaluated across two datasets (SST-2, MultiNLI) and two noise types with 5 seeds.
+    \item We introduce \textbf{Explanation-Consistency Graphs (ECG)} and compare explanation-space neighborhood surprise with direct label mismatch, two signals derived from one structured LLM call.
 
-    \item We establish a \textbf{concrete failure mode} for confidence-based cleaning: when artifacts enable confident fitting, Cleanlab achieves only $0.136 \pm 0.025$ AUROC on SST-2 (worse than random), while ECG achieves $0.819 \pm 0.004$.
-    On MultiNLI, training-based methods also degrade under artifacts ($0.526$--$0.686$).
+    \item We characterize the signals under five-seed uniform label noise. Cleanlab leads ECG on SST-2 ($.974 \pm .001$ versus $.915 \pm .003$), while on MultiNLI direct label mismatch is substantially more reliable than ECG ($.883 \pm .003$ versus $.560 \pm .007$).
 
-    \item We identify \textbf{complementary failure modes}: ECG excels on SST-2 artifacts while LLM Mismatch excels on MultiNLI artifacts ($0.883 \pm 0.002$), yet both derive from the same LLM inference---a single structured explanation yields both signals at no additional cost.
+    \item We audit the shortcut-correlated construction, identify label leakage and unequal classifier/LLM inputs, withdraw its detection comparisons, and specify a corrected construction for future evaluation.
 \end{enumerate}
 
 %==============================================================================
@@ -127,7 +125,7 @@ For NLP, out-of-sample loss ranking with pretrained language models can be highl
 \paragraph{Gap.}
 These approaches---including the more recent discriminative dynamics \citep{kim2024discriminative} and probability-curvature \citep{wang2024noisegpt} methods---share a reliance on training-time difficulty (high loss, low margin, or low confidence).
 When artifacts make wrong labels easy to fit, mislabeled instances can have \emph{low loss and high confidence} throughout training, rendering confidence- and dynamics-based detectors unreliable.
-ECG addresses this failure mode by using a signal derived from \emph{explanations} rather than the classifier's fit.
+ECG tests whether a signal derived from \emph{explanations} can complement classifier-fit signals.
 
 %------------------------------------------------------------------------------
 \subsection{Graph-Based Data Quality and Neighborhood Disagreement}
@@ -140,7 +138,7 @@ Recent work improves robustness when errors cluster, e.g., reliability-weighted 
 \paragraph{Gap.}
 Prior graph-based approaches build neighborhoods over input embeddings or model representations.
 ECG keeps the same neighborhood-disagreement idea but changes the substrate: it constructs the graph in \emph{explanation embedding space}, where neighbors are defined by similar \emph{label-justifying evidence and rationales}.
-This shift is crucial in artifact-aligned settings, where input-space similarity can preserve spurious markers rather than the underlying ``why'' of the label.
+Our experiments test whether this representation provides a useful label-error ranking relative to input- and classifier-derived signals.
 
 %------------------------------------------------------------------------------
 \subsection{Explanations, Artifacts, and Dataset Debugging}
@@ -154,7 +152,7 @@ These tools are motivated by a broad literature on spurious correlations and ann
 
 \paragraph{Gap.}
 Existing explanation-based debugging largely supports \emph{human} discovery or \emph{model} regularization, while spurious-correlation work typically targets mitigation rather than identifying which \emph{training instances} are mislabeled.
-To our knowledge, ECG is the first to aggregate LLM explanations via graph structure for automated data cleaning, bridging the explanation and data-quality literatures.
+ECG connects these literatures by using structured LLM explanations as the representation for an automated neighborhood-disagreement score.
 
 \paragraph{LLM-generated explanations.}
 Because ECG relies on structured LLM explanations as a representation, we summarize related work on structured generation and explanation reliability in Appendix~\ref{sec:appendix_related}.
@@ -167,7 +165,7 @@ Because ECG relies on structured LLM explanations as a representation, we summar
 Given a training dataset $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^n$ with potentially noisy labels $y_i$, our goal is to produce a suspiciousness ranking that places mislabeled or artifact-laden instances at the top.
 ECG achieves this through three stages: explanation generation (\S\ref{sec:explain}), explanation embedding and graph construction (\S\ref{sec:graph}), and neighborhood surprise computation (\S\ref{sec:signals}).
 Figure~\ref{fig:architecture} provides an overview.
-We also explored additional signals (NLI contradiction, stability, training dynamics) but found they did not improve over simple neighborhood surprise; we analyze this in \S\ref{sec:analysis} and provide details in Appendix~\ref{sec:appendix_signals}.
+We also explored additional signals (NLI contradiction, stability, and a single-checkpoint training margin); Appendix~\ref{sec:appendix_signals} defines them and \S\ref{sec:analysis} states the evidence boundary for their analysis.
 
 \input{assets/fig_architecture_placeholder}
 
@@ -186,7 +184,7 @@ The explanation contains:
     \item \texttt{confidence}: Integer 0--100
 \end{itemize}
 
-We enforce schema validity via constrained decoding and instruct the LLM to ignore metadata tokens (e.g., \texttt{<lbl\_pos>}) so explanations reflect semantic content rather than spurious markers.
+We enforce schema validity via constrained decoding.
 
 \paragraph{Stability Sampling.}
 LLM explanations can be unstable across random seeds.
@@ -245,15 +243,13 @@ High $\Snbr$ indicates the observed label is unlikely given similar explanations
 Instances are ranked by $\Snbr$ and the top-$K$ are flagged for removal or review.
 
 \paragraph{Why Explanation Space?}
-The same neighborhood surprise algorithm can be applied to input embeddings (ECG (input)) or explanation embeddings (ECG).
-The key empirical finding is that explanation embeddings yield substantially better detection on SST-2 artifact-aligned noise ($0.819 \pm 0.004$ vs.\ $0.683 \pm 0.006$ for ECG (input); Table~\ref{tab:detection}).
-Explanations capture label-quality information invisible in input space: when labels are wrong, the LLM's rationale reflects semantic inconsistency with similar examples, even if the input text is similar to correctly-labeled examples.
+The same neighborhood-surprise algorithm can be applied to input embeddings or explanation embeddings.
+This comparison isolates whether the structured explanation representation changes the ranking; our audited main results report its behavior under uniform noise (Table~\ref{tab:detection}).
 
 \paragraph{Explored Extensions.}
-We also investigated additional signals: NLI contradiction (does the explanation contradict the label?), explanation stability (does the LLM give consistent explanations across samples?), and training dynamics (does the classifier struggle to learn this example?).
-Surprisingly, combining these signals with neighborhood surprise \textit{degraded} performance on artifact-aligned noise.
-We analyze why in \S\ref{sec:analysis}: the training dynamics signal is anti-correlated with noise when artifacts make wrong labels easy to learn.
-Details of all signals are in Appendix~\ref{sec:appendix_signals}.
+We also investigated additional signals: NLI contradiction (does the explanation contradict the label?), explanation stability (does the LLM give consistent explanations across samples?), and a final-checkpoint margin (how strongly does the classifier favor the observed label at the end of training?).
+Because the experiments used to analyze their aggregation were run under the withdrawn shortcut-correlated construction, we make no performance claim from that comparison.
+Definitions are in Appendix~\ref{sec:appendix_signals}.
 
 %==============================================================================
 \section{Experimental Setup}
@@ -264,24 +260,24 @@ Details of all signals are in Appendix~\ref{sec:appendix_signals}.
 
 We evaluate on two datasets: \textbf{SST-2} \citep{socher2013recursive} (binary sentiment, 25k training examples) and \textbf{MultiNLI} \citep{williams2018multinli} (3-class NLI: entailment/neutral/contradiction, 25k training examples).
 MultiNLI is known for hypothesis-only bias \citep{poliak2018hypothesis}, where label-correlated lexical cues in the hypothesis enable spurious shortcuts.
-We create two synthetic noise conditions at rate $p=10\%$:
+We constructed two synthetic noise conditions at rate $p=10\%$:
 
 \paragraph{Uniform Noise.}
 Labels are flipped uniformly at random.
 This is a sanity check where confidence-based methods should excel.
 
-\paragraph{Artifact-Aligned Noise.}
-Labels are flipped \textit{and} a spurious marker is appended: \texttt{<lbl\_pos>} for (flipped) positive labels, \texttt{<lbl\_neg>} for negative (analogous markers for NLI classes).
-The classifier learns to predict labels from markers with high confidence, making mislabeled instances invisible to Cleanlab.
-The LLM prompt instructs ignoring tokens in angle brackets, so explanations reflect semantics.
+\paragraph{Shortcut-Correlated Noise.}
+The original construction flipped labels and appended a marker keyed to the flipped label (\texttt{<lbl\_pos>} or \texttt{<lbl\_neg>}, with analogous class handling for MultiNLI).
+An audit found that marker assignment occurred inside the flip loop, so marker presence exactly identified mislabeled examples; we therefore withdraw all detection comparisons from this condition and retain it only as a documented construction defect.
+For MultiNLI, the classifier tokenizer read the marker-bearing \texttt{sentence} field, whereas the LLM prompt interpolated only \texttt{premise} and \texttt{hypothesis}; the two arms therefore received different inputs.
 
 \subsection{Baselines}
 
 We compare against both training-based and explanation-based methods:
 
 \paragraph{Training-based.}
-\textbf{Cleanlab}: confident learning with 5-fold cross-validated probabilities \citep{northcutt2021confident};
-\textbf{AUM}: Area Under Margin from training dynamics \citep{pleiss2020identifying};
+\textbf{Cleanlab}: self-confidence label-quality ranking computed over 5-fold cross-validated probabilities; we rank by this score rather than by estimating a joint distribution of observed and latent labels \citep{northcutt2021confident};
+\textbf{AUM}: a single final-checkpoint margin, used as a one-checkpoint approximation of Area Under the Margin rather than the per-epoch margin integral \citep{pleiss2020identifying};
 \textbf{NRG}: Neural Relation Graph, kNN label disagreement in classifier embedding space \citep{kim2023neural};
 \textbf{Classifier kNN}: kNN disagreement on fine-tuned classifier embeddings.
 
@@ -294,14 +290,13 @@ We compare against both training-based and explanation-based methods:
 
 \paragraph{Detection.} We report Area Under the ROC Curve (\textbf{AUROC}), which measures ranking quality over all thresholds (1.0 = perfect, 0.5 = random).
 
-\paragraph{Downstream.} Accuracy on clean test set after removing flagged instances.
-
 \subsection{Implementation}
 
 We fine-tune RoBERTa-base for 3 epochs with batch size 64 and learning rate 2e-5.
 Explanations use Qwen3-8B \citep{qwen3} via vLLM \citep{vllm} with constrained JSON decoding.
-NLI verification uses an ensemble of RoBERTa-large-MNLI and BART-large-MNLI.
-All results report mean $\pm$ std over 5 random seeds (42, 123, 456, 789, 1024).
+The appendix-only $\Snli$ signal uses an ensemble of RoBERTa-large-MNLI and BART-large-MNLI.
+Table~\ref{tab:detection} reports mean $\pm$ standard deviation over five random seeds (42, 123, 456, 789, 1024).
+The uniform-noise sensitivity table comes from an earlier single-seed run (seed 42) and is labeled accordingly in its caption.
 Experiments run on a single H100 GPU.
 
 %==============================================================================
@@ -311,93 +306,66 @@ Experiments run on a single H100 GPU.
 
 \subsection{Main Results}
 
-Table~\ref{tab:detection} presents AUROC across all methods, datasets, and noise types.
-Two clear regimes emerge.
+Table~\ref{tab:detection} presents five-seed AUROC for the audited uniform-noise comparisons on SST-2 and MultiNLI.
 
 \input{assets/tab_detection}
 
-\paragraph{Uniform Noise.}
-Training-based methods dominate on both datasets: Cleanlab achieves $.974 \pm .001$ on SST-2 and $.936 \pm .003$ on MultiNLI.
-This is expected---random label flips cause low classifier confidence, which these methods exploit.
-Explanation-based methods remain competitive (ECG: $.915 \pm .003$ on SST-2) but cannot match methods with direct access to training dynamics.
+\paragraph{SST-2 Uniform Noise.}
+Cleanlab achieves $.974 \pm .001$, outperforming ECG at $.915 \pm .003$.
+The result establishes that explanation-space neighborhood surprise does not replace a strong confidence-based ranker in this setting.
 
-\paragraph{Artifact-Aligned Noise: SST-2.}
-Confidence-based methods collapse: Cleanlab drops to $.136 \pm .025$ (below random) because spurious markers make mislabeled examples look clean.
-ECG leads at $.819 \pm .004$, outperforming the next-best LLM Mismatch ($.628 \pm .004$) by a wide margin.
-Applying the same neighborhood surprise algorithm on input embeddings (ECG (input): $.683 \pm .006$) yields substantially lower performance---a 20\% relative gap---demonstrating that explanation embeddings capture label-quality information invisible in input space.
-
-\paragraph{Artifact-Aligned Noise: MultiNLI.}
-A different pattern emerges: LLM Mismatch leads at $.883 \pm .002$, while ECG ($.557 \pm .009$), Input kNN ($.523 \pm .009$), and ECG (input) ($.469 \pm .009$) are all near or below random.
-This structural finding---all kNN methods fail regardless of embedding space---indicates that MultiNLI's 3-class label structure makes neighborhood-based detection inherently harder, because correct labels of neighbors are less informative when spread across three classes.
+\paragraph{MultiNLI Uniform Noise.}
+Cleanlab is again strongest at $.936 \pm .003$.
+Among the two signals available from the structured LLM call, direct label mismatch achieves $.883 \pm .003$, whereas ECG is near random at $.560 \pm .007$.
+Explanation-space consistency is therefore not uniformly reliable across the two tasks.
 
 \subsection{Complementarity from a Single LLM Call}
 
-A key finding is that ECG and LLM Mismatch are complementary yet derived from the \emph{same} LLM inference: the structured explanation produced for each example yields both a predicted label (enabling mismatch detection) and semantic content (enabling neighborhood surprise).
-ECG excels when explanation embeddings form discriminative clusters (SST-2 artifact: $.819$), while LLM Mismatch excels when the LLM's label prediction directly surfaces errors (MNLI artifact: $.883$).
-Neither method requires retraining the classifier.
-A practitioner can compute both signals from cached explanations at negligible additional cost.
-
-\subsection{Downstream Improvements}
-
-Table~\ref{tab:downstream} shows accuracy on SST-2 after cleaning with ECG on artifact-aligned noise.
-Removing the top 2\% of flagged instances yields a +0.57\% accuracy improvement.
-At K=1\%, precision is highest (66.8\%) but too few noisy examples are removed to impact accuracy; at K=10\%, recall is high but precision drops, removing too many clean examples.
-
-\input{assets/tab_downstream}
+A structured explanation yields both a predicted label (enabling mismatch detection) and evidence-plus-rationale text (enabling neighborhood surprise).
+On SST-2 uniform noise, ECG ($.915 \pm .003$) and direct label mismatch ($.909 \pm .003$) are similar; on MultiNLI uniform noise, direct mismatch ($.883 \pm .003$) is substantially stronger than ECG ($.560 \pm .007$).
+Both scores can be computed from the same cached LLM output without an additional inference call, although their reliability remains task-dependent.
 
 \subsection{Ablation Studies}
 
 \paragraph{Noise Rate Sensitivity.}
-Table~\ref{tab:noise_sensitivity} shows ECG's advantage over ECG (input) on SST-2 is consistent across noise rates (5\%, 10\%, 20\%) and \textit{increases} at higher noise rates on artifact-aligned noise.
+Table~\ref{tab:noise_sensitivity} reports the earlier single-seed (seed 42) SST-2 uniform-noise sweep across noise rates, including Cleanlab as a reference.
+We treat this table as a sensitivity check rather than multi-seed evidence.
 
 \input{assets/tab_noise_sensitivity}
-
-\paragraph{Dataset Size Sensitivity.}
-Table~\ref{tab:dataset_size} shows ECG's advantage on SST-2 is largest on smaller datasets (+0.255 AUROC at 5k vs.\ +0.161 at 25k).
-
-\input{assets/tab_dataset_size}
-
-\paragraph{LLM Size Trade-off.}
-Table~\ref{tab:llm_size} shows smaller LLMs (1.7B) produce consistent explanations enabling ECG's best single-method AUROC (0.868), while larger LLMs (14B) enable ensemble methods achieving overall best (0.896).
-
-\input{assets/tab_llm_size}
 
 %==============================================================================
 \section{Analysis}
 \label{sec:analysis}
 %==============================================================================
 
-\paragraph{Why Explanations Succeed Where Confidence Fails.}
-ECG works because \textit{explanations and classifiers process different information}.
-The classifier learns to predict wrong labels from spurious markers with high confidence---precisely when confident learning fails \citep{northcutt2021confident}.
-But the LLM explanation processes semantic content and cites evidence reflecting the true sentiment, so its embedding clusters with correctly labeled examples, creating high neighborhood surprise.
-This aligns with findings that explanations expose artifacts invisible to standard diagnostics \citep{pezeshkpour2022combining, han2020influence}.
+\paragraph{Regime Dependence Under Uniform Noise.}
+The audited results support a narrower conclusion than the original shortcut-correlated comparison.
+Cleanlab is strongest on both uniform-noise tasks, ECG is useful but lower on SST-2, and direct label mismatch is the stronger LLM-derived signal on MultiNLI.
+These results motivate reporting both LLM-derived scores rather than treating explanation-space consistency as uniformly preferable.
 
-\paragraph{Why Multi-Signal Aggregation Failed.}
-We designed ECG with five signals, but aggregation underperformed simple neighborhood surprise.
-The culprit is $\Sdyn = -\text{AUM}$: under artifact noise, mislabeled examples are \textit{easy} to learn (high AUM), so $\Sdyn$ assigns \textit{low} suspicion to exactly the examples we want to detect.
-This anti-correlated signal degrades overall performance when combined with neighborhood surprise.
+\paragraph{Evidence Boundary for Multi-Signal Aggregation.}
+We designed ECG with five candidate signals, but the aggregation analysis used the withdrawn shortcut-correlated condition.
+We therefore document the signal definitions in Appendix~\ref{sec:appendix_signals} without claiming that their combination improves or degrades detection.
 
 \input{assets/tab_compute_cost}
 
 \paragraph{ECG vs.\ LLM Mismatch.}
-LLM Mismatch---flagging examples where $\hat{y}_i \neq y_i$---achieves $.628$ on SST-2 artifacts, but ECG outperforms it ($.819$ vs.\ $.628$) because mismatch is a binary signal that cannot distinguish borderline from clear-cut inconsistencies.
-The picture reverses on MultiNLI ($.883$ vs.\ $.557$), a structural limitation of kNN detection in 3-class settings.
-Both signals derive from the \emph{same} LLM call, making them complementary at zero additional cost.
+LLM Mismatch flags examples where $\hat{y}_i \neq y_i$; ECG instead ranks neighborhood surprise in the explanation embedding space.
+Under uniform noise, their AUROCs are similar on SST-2 ($.909 \pm .003$ and $.915 \pm .003$, respectively), while mismatch is substantially stronger on MultiNLI ($.883 \pm .003$ versus $.560 \pm .007$).
+Both signals derive from the \emph{same} LLM call, so computing both requires no additional LLM inference.
 
 \paragraph{When to Use Which Method.}
-Our results suggest practical guidelines:
+Our audited results support the following limited guidance:
 \begin{itemize}
-    \item \textbf{Random noise}: Use Cleanlab (SST-2: $.974$, MNLI: $.936$)
-    \item \textbf{Artifact noise, binary tasks}: Use ECG (SST-2: $.819$)
-    \item \textbf{Artifact noise, multi-class}: Use LLM Mismatch (MNLI: $.883$)
-    \item \textbf{Uncertain}: Compute both ECG and LLM Mismatch from a single LLM inference pass and select based on validation signal
+    \item \textbf{Uniform noise}: Cleanlab is strongest on both SST-2 ($.974 \pm .001$) and MultiNLI ($.936 \pm .003$).
+    \item \textbf{LLM-derived debugging}: Compute ECG and direct label mismatch from the same structured output; MultiNLI shows that mismatch can remain strong when ECG is near random.
+    \item \textbf{Shortcut-correlated noise}: Do not use the withdrawn comparisons; the corrected construction still requires evaluation.
 \end{itemize}
 
 \paragraph{Failure Cases.}
 ECG struggles with genuinely ambiguous sentences where the LLM is also uncertain.
 Distinguishing ``ambiguous'' from ``mislabeled'' remains challenging \citep{maini2022second}.
-ECG also depends on the LLM correctly ignoring spurious markers; we mitigate this through explicit prompting.
+ECG also depends on the LLM correctly ignoring spurious markers, and the prompt used in our experiments contains no instruction to do so (Appendix~B).
 
 \paragraph{Computational Cost.}
 Table~\ref{tab:compute_cost} compares wall-clock time and cost.
@@ -410,17 +378,23 @@ Explanations are generated once and cached; recomputing scores across seeds take
 \label{sec:conclusion}
 %==============================================================================
 
-We introduced Explanation-Consistency Graphs (ECG), demonstrating that neighborhood surprise in \textit{explanation embedding space} substantially outperforms the same algorithm on input embeddings for detecting mislabeled training examples.
-Evaluated across SST-2 and MultiNLI with 5 seeds, ECG achieves $0.819 \pm 0.004$ AUROC on SST-2 artifact noise where Cleanlab degrades to $0.136$, while a complementary LLM-based signal---label mismatch---leads on MultiNLI ($0.883$).
-Both signals derive from the same LLM inference at zero additional cost.
-By treating explanations as semantic representations for data quality, ECG establishes a new paradigm for data-centric NLP.
+We introduced Explanation-Consistency Graphs (ECG) and compared explanation-space neighborhood surprise with direct label mismatch from the same structured LLM call.
+Across five-seed uniform-noise experiments, Cleanlab is strongest on SST-2 and MultiNLI; ECG is useful but lower on SST-2, while direct label mismatch substantially exceeds ECG on MultiNLI.
+Both LLM-derived signals require only one inference pass, but their reliability is task-dependent.
+An audit found that the shortcut-correlated construction leaked the noise indicator and gave the MultiNLI classifier and LLM different inputs, so we withdraw those detection comparisons and leave evaluation of the corrected construction to future work.
 
 %==============================================================================
 \section*{Limitations}
 %==============================================================================
 
+\paragraph{Shortcut-Correlated Construction Audit.}
+We found that \texttt{has\_artifact} was assigned inside the flip loop at \texttt{src/ecg/data.py:282}, making marker presence identical to the noise indicator.
+A marker-regex baseline therefore achieves AUROC 1.000 on all five seeds, and the sub-random confident-learning AUROC we previously reported in this condition is forced by the construction rather than a property of confident learning.
+We withdraw the shortcut-correlated detection comparisons and report only the uniform-noise results.
+We specify a corrected construction in which the marker set is drawn independently of the flip set and each marker is keyed to the observed label, but this corrected condition has not yet been evaluated at the evidence cutoff for this paper.
+
 \paragraph{Noise Realism.}
-Our artifact-aligned condition uses injected tokens rather than naturally occurring spurious correlations.
+The corrected shortcut-correlated condition uses injected tokens rather than naturally occurring spurious correlations.
 Evaluation on benchmarks with real-world label noise \citep{raczkowska2024allenoise} remains future work.
 
 \paragraph{LLM Dependence and Scale.}
@@ -429,7 +403,7 @@ Generating explanations for very large datasets may be prohibitive, though API c
 
 \paragraph{Task Coverage.}
 We evaluate on binary sentiment and 3-class NLI.
-ECG requires label-discriminative explanation clusters; when task structure makes this difficult (e.g., 3-class NLI), LLM Mismatch may be preferred.
+In our uniform-noise results, direct label mismatch ranks errors more reliably than ECG on MultiNLI; this comparison does not establish whether class count causes the difference.
 Extension to structured prediction, generative tasks, and non-English languages remains future work.
 
 %==============================================================================
@@ -437,9 +411,6 @@ Extension to structured prediction, generative tasks, and non-English languages 
 %==============================================================================
 
 Automated cleaning may inadvertently remove minority viewpoints or reinforce majority biases if the LLM exhibits biases; we recommend human review of flagged instances for sensitive domains.
-AI writing assistants were used for code debugging and LaTeX formatting; all scientific contributions are the authors' original work.
-
-% Acknowledgements removed for anonymous review - will be added in camera-ready version.
 
 %==============================================================================
 % Bibliography
@@ -453,8 +424,7 @@ AI writing assistants were used for code debugging and LaTeX formatting; all sci
 %==============================================================================
 
 In addition to neighborhood surprise ($\Snbr$), we explored four additional signals.
-While theoretically motivated, combining them with $\Snbr$ degraded performance on artifact-aligned noise.
-We document them here for completeness.
+Because the aggregation experiment used the withdrawn shortcut-correlated construction, we document the definitions without drawing a performance conclusion from their combination.
 
 \paragraph{NLI Contradiction ($\Snli$).}
 If an explanation \textit{contradicts} the observed label according to an NLI model, the label may be wrong.
@@ -479,15 +449,11 @@ High explanation variance may indicate ambiguous instances:
 where $\rho_i$ is the reliability score from stability sampling.
 
 \paragraph{Training Dynamics ($\Sdyn$).}
-Low AUM indicates the classifier struggles with this example:
+The implementation uses the negative final-checkpoint margin as a suspiciousness score:
 \begin{equation}
-    \Sdyn(i) = -\text{AUM}(i)
+    \Sdyn(i) = -m_{\mathrm{final}}(i)
 \end{equation}
-
-\paragraph{Why Aggregation Failed.}
-Under artifact-aligned noise, $\Sdyn$ is \textit{anti-correlated} with noise because artifacts make mislabeled examples easy to learn (high AUM).
-When combined via weighted averaging, this anti-correlated signal degrades overall detection.
-Future work should explore noise-regime-aware signal selection.
+This is a one-checkpoint approximation of Area Under the Margin, not the per-epoch margin integral defined by AUM \citep{pleiss2020identifying}.
 
 %==============================================================================
 \section{Implementation Details}
@@ -506,11 +472,9 @@ The LLM prompt for SST-2 explanation generation is:
 
 \texttt{Task: classify the sentiment of the INPUT as POSITIVE or NEGATIVE.}
 
-\texttt{IMPORTANT: Ignore any metadata tokens in angle brackets like <lbl\_pos>, <lbl\_neg>.}
-
 \texttt{Return ONLY valid JSON with keys:}
 \texttt{- "pred\_label": "POSITIVE" or "NEGATIVE"}
-\texttt{- "evidence": array of 1-3 EXACT substrings}
+\texttt{- "evidence": an array of 1 to 3 EXACT substrings copied from the INPUT}
 \texttt{- "rationale": one sentence, $\leq$25 tokens}
 \texttt{- "counterfactual": minimal change to flip sentiment}
 \texttt{- "confidence": integer 0-100}
@@ -562,7 +526,7 @@ These extensions demonstrate the broad applicability of confidence-based detecti
 
 Beyond AUM and CTRL-style dynamics, second-split forgetting \citep{maini2022second} characterizes datapoints by how quickly they are forgotten during continued training on a held-out split.
 Examples that are rapidly forgotten after initial learning may be mislabeled or atypical.
-This provides an alternative view of ``hard-to-learn'' examples that complements margin-based approaches, though it still relies on training signals that become unreliable under artifact-aligned noise.
+This provides an alternative view of ``hard-to-learn'' examples that complements margin-based approaches, though its reliability may change when a classifier fits label errors confidently.
 
 %------------------------------------------------------------------------------
 \subsection{Robust Graph Construction in NLP}
@@ -589,7 +553,7 @@ A central concern with LLM explanations is that plausible explanations may not b
 Faithfulness varies by explanation type and model family \citep{madsen2024faithfulness}.
 Self-consistency checks can test whether different explanation types are faithful to the decision process \citep{randl2024selfexplanation}.
 Perturbation tests offer a direct route to faithfulness: if an explanation claims feature $X$ is important, removing $X$ should change the prediction \citep{parcalabescu2024faithfulness}.
-ECG addresses faithfulness concerns not by assuming explanations are faithful, but by \textit{verifying} them through neighborhood agreement: if an explanation's embedding clusters with correctly-labeled examples, the explanation is likely meaningful regardless of whether it captures the LLM's ``true'' reasoning.
+ECG does not establish explanation faithfulness; neighborhood agreement measures consistency between the explanation representation and nearby observed labels.
 
 \paragraph{Explanation Stability and Uncertainty.}
 LLM explanations can be unstable across prompts and random seeds.
@@ -599,7 +563,8 @@ These findings motivate ECG's stability sampling and reliability weighting: by g
 
 \paragraph{Label Leakage in Rationales.}
 Rationales can correlate with labels in ways enabling leakage, where a model can predict the label from the rationale without looking at the input \citep{wiegreffe2021label}.
-ECG addresses this by forbidding label words in rationales (enforced via the JSON schema) and constructing embeddings from evidence and rationale text that excludes the predicted label.
+The prompt asks the LLM not to use label words in rationales, and ECG excludes the predicted-label field from its embedding text.
+These measures do not prevent copied evidence spans from carrying label-correlated markers; the ``Shortcut-Correlated Construction Audit'' limitation documents this unresolved leakage path.
 
 % \input{ReproducibilityChecklist.tex}
 \end{document}
